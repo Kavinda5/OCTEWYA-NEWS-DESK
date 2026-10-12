@@ -146,6 +146,40 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# 2.1 Authentication Gate
+AUTH_USER = os.environ.get("ADMIN_USERNAME", "octewya")
+AUTH_PASS = os.environ.get("ADMIN_PASSWORD", "Oct921027")
+
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    _, col2, _ = st.columns([1, 1.2, 1])
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; margin-top: 50px; margin-bottom: 25px;">
+            <h1 style="color: #F59E0B; font-weight: 800; font-size: 34px; margin: 0; letter-spacing: 1px;">OCTEWYA</h1>
+            <div style="color: #94A3B8; font-size: 14px; margin-top: 4px;">Institutional Macro Intelligence Desk</div>
+            <div style="font-size: 11px; color: #64748B; margin-top: 4px;">© OCTEWYA all rights reserved</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("login_form"):
+            st.markdown("### 🔒 Portal Login")
+            u_input = st.text_input("Username / පරිශීලක නම", placeholder="Enter username")
+            p_input = st.text_input("Password / මුරපදය", type="password", placeholder="Enter password")
+            submit_btn = st.form_submit_button("Sign In / ඇතුල් වන්න", use_container_width=True)
+            
+            if submit_btn:
+                if u_input.strip() == AUTH_USER and p_input.strip() == AUTH_PASS:
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid Username or Password / පරිශීලක නම හෝ මුරපදය වැරදියි")
+        
+        st.markdown("<div style='text-align:center; font-size:11px; color:#64748B; margin-top:20px;'>Protected Institutional Environment &bull; Unauthorized Access Prohibited</div>", unsafe_allow_html=True)
+    st.stop()
+
 # 3. Sidebar Configuration (Language, Evolving Calendar, Controls)
 with st.sidebar:
     st.markdown("### 🌐 Settings / සැකසුම්")
@@ -176,9 +210,15 @@ with st.sidebar:
             if api_key_input:
                 os.environ["GEMINI_API_KEY"] = api_key_input
 
+    # Logout Button
+    st.markdown("---")
+    if st.button("🚪 Logout / ඉවත් වන්න", use_container_width=True):
+        st.session_state["authenticated"] = False
+        st.rerun()
+
     # Elegant subtle branding in sidebar
     st.markdown(f"""
-    <div style='margin-top: 40px; font-size: 11px; color: #64748B; text-align: center;'>
+    <div style='margin-top: 30px; font-size: 11px; color: #64748B; text-align: center;'>
         <b>OCTEWYA Institutional Suite</b><br>
         {t("brand_copyright", lang_choice)}
     </div>
