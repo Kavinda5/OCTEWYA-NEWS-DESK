@@ -10,6 +10,26 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+from datetime import datetime, timezone, timedelta
+
+TIMEZONES = {
+    "SL": ("Sri Lanka (UTC+5:30)", 5, 30),
+    "UTC": ("UTC / GMT (Server)", 0, 0),
+    "DXB": ("Dubai (UTC+4:00)", 4, 0),
+    "LDN": ("London (UTC+1:00)", 1, 0),
+    "NY": ("New York (UTC-4:00)", -4, 0)
+}
+
+def get_current_time_str(tz_key: str = "SL") -> str:
+    """Returns formatted time for selected timezone (default Sri Lanka)."""
+    tz_info = TIMEZONES.get(tz_key, TIMEZONES["SL"])
+    hours, mins = tz_info[1], tz_info[2]
+    dt = datetime.now(timezone.utc) + timedelta(hours=hours, minutes=mins)
+    return dt.strftime("%I:%M:%S %p")
+
+def get_current_sl_time_str() -> str:
+    return get_current_time_str("SL")
+
 # Fallback cache to prevent API rate limiting
 _CACHE = {
     "last_fetch": 0,
@@ -45,7 +65,7 @@ def fetch_live_macro_data(ttl_seconds: int = 30) -> dict:
         "estimated_duration": "1 - 2 Hours",
         "breakout_risk_pct": 65,
         "gold_history": None,
-        "sync_time": time.strftime("%H:%M:%S")
+        "sync_time": get_current_sl_time_str()
     }
 
     try:
