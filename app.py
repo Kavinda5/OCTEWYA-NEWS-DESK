@@ -10,15 +10,31 @@ load_dotenv()
 
 import streamlit as st
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # Local Modules
 from modules.i18n import t, LANGUAGES
-from modules.market_data import fetch_live_macro_data, TIMEZONES, get_current_time_str
+from modules.market_data import fetch_live_macro_data
 from modules.geopolitics_engine import fetch_geopolitical_intel
 from modules.history_engine import HISTORICAL_EVENTS, compare_historical_precedent
 from modules.calendar_engine import fetch_dynamic_calendar
 from modules.ai_analyst import generate_macro_assessment
+
+# Universal Timezone Definition directly in app.py
+TIMEZONES = {
+    "SL": ("Sri Lanka (UTC+5:30)", 5, 30),
+    "UTC": ("UTC / GMT (Server)", 0, 0),
+    "DXB": ("Dubai (UTC+4:00)", 4, 0),
+    "LDN": ("London (UTC+1:00)", 1, 0),
+    "NY": ("New York (UTC-4:00)", -4, 0)
+}
+
+def get_current_time_str(tz_key: str = "SL") -> str:
+    """Returns formatted time for selected timezone (default Sri Lanka)."""
+    tz_info = TIMEZONES.get(tz_key, TIMEZONES["SL"])
+    hours, mins = tz_info[1], tz_info[2]
+    dt = datetime.now(timezone.utc) + timedelta(hours=hours, minutes=mins)
+    return dt.strftime("%I:%M:%S %p")
 
 # 1. Page Configuration
 st.set_page_config(
