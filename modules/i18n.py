@@ -116,6 +116,10 @@ TRANSLATIONS = {
         "en": "Orderly Trend Continuation",
         "si": "ක්‍රමානුකූල Trend ගමනක්"
     },
+    "regime_orderly_trend": {
+        "en": "Orderly Trend Continuation",
+        "si": "ක්‍රමානුකූල Trend ගමනක්"
+    },
     "expected_duration": {
         "en": "Estimated Horizon / Duration",
         "si": "අපේක්ෂිත කාලසීමාව"

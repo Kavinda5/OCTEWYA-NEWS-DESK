@@ -40,6 +40,12 @@ BEARISH_KEYWORDS = [
     "gold falls", "gold drops", "gold tumbles", "gold plunges", "gold selloff", "gold slides"
 ]
 
+EXCLUDE_KEYWORDS = [
+    "medal", "olympic", "championship", "tournament", "football", "soccer",
+    "cricket", "basketball", "movie", "film", "actor", "actress", "concert",
+    "fashion", "festival"
+]
+
 def fetch_geopolitical_intel(ttl_seconds: int = 45) -> dict:
     """
     Parses real-time breaking wires and calculates both the Safe-Haven Score
@@ -78,6 +84,10 @@ def fetch_geopolitical_intel(ttl_seconds: int = 45) -> dict:
 
                 lower_title = title.lower()
                 
+                # Exclude sports or entertainment false positives
+                if any(ex in lower_title for ex in EXCLUDE_KEYWORDS):
+                    continue
+                
                 # Check impact on Gold
                 is_war = any(k in lower_title for k in WAR_BULLISH_KEYWORDS)
                 is_dovish = any(k in lower_title for k in FED_DOVISH_KEYWORDS)
@@ -98,10 +108,14 @@ def fetch_geopolitical_intel(ttl_seconds: int = 45) -> dict:
                     impact_type = "MACRO_HAWKISH"
                     bearish_mentions += 1
 
+                pub_parsed = entry.get("published_parsed")
+                pub_epoch = time.mktime(pub_parsed) if pub_parsed else 0
+
                 headlines.append({
                     "title": title,
                     "source": source_name,
                     "published": published[:22] if published else "Recent",
+                    "pub_epoch": pub_epoch,
                     "link": link,
                     "bias": bias,
                     "impact_type": impact_type,
@@ -119,8 +133,8 @@ def fetch_geopolitical_intel(ttl_seconds: int = 45) -> dict:
             seen.add(core)
             unique_headlines.append(h)
 
-    # Sort hot headlines first
-    unique_headlines.sort(key=lambda x: (x["is_hot"], x["bias"] != "NEUTRAL"), reverse=True)
+    # Sort hot headlines first, and within hot headlines, sort by ABSOLUTE NEWEST published time!
+    unique_headlines.sort(key=lambda x: (x["is_hot"], x.get("pub_epoch", 0)), reverse=True)
 
     # Calculate Geopolitical Tension Score (0 - 100)
     calculated_score = 25 + (war_mentions * 6) - (bearish_mentions * 4)
