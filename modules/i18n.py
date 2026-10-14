@@ -63,32 +63,40 @@ TRANSLATIONS = {
 
     # Master Direction & Regimes
     "master_signal_title": {
-        "en": "🎯 Master Strategic Bias (M1 - M15 Intraday)",
-        "si": "🎯 ප්‍රධාන වෙළඳපොළ නැඹුරුව (M1 - M15 Intraday)"
+        "en": "👑 MASTER STRATEGIC BIAS: GOLD (XAUUSD) INTRADAY",
+        "si": "👑 ප්‍රධාන වෙළඳපොළ නැඹුරුව: GOLD (XAUUSD) INTRADAY"
     },
     "bias_strong_buy": {
-        "en": "🟢 STRONG BUY (High Conviction)",
-        "si": "🟢 දැඩි BUY නැඹුරුවක් (Strong Buy)"
+        "en": "🟢 GOLD (XAUUSD): STRONG BUY (High Conviction)",
+        "si": "🟢 GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් (Strong Buy)"
     },
     "bias_buy": {
-        "en": "🟢 MODERATE BUY",
-        "si": "🟢 සාමාන්‍ය BUY නැඹුරුවක් (Moderate Buy)"
+        "en": "🟢 GOLD (XAUUSD): MODERATE BUY (Accumulation)",
+        "si": "🟢 GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් (Moderate Buy)"
     },
     "bias_neutral": {
-        "en": "🟡 NEUTRAL / CONSOLIDATION",
-        "si": "🟡 මධ්‍යස්ථ / දෝලනය වන තත්ත්වයක් (Neutral)"
+        "en": "🟡 GOLD (XAUUSD): NEUTRAL / RANGE (Consolidation)",
+        "si": "🟡 GOLD (රත්රන්): මධ්‍යස්ථ / RANGE (දෝලනය වන තත්ත්වයක්)"
     },
     "bias_sell": {
-        "en": "🔴 MODERATE SELL",
-        "si": "🔴 සාමාන්‍ය SELL නැඹුරුවක් (Moderate Sell)"
+        "en": "🔴 GOLD (XAUUSD): MODERATE SELL (Distribution)",
+        "si": "🔴 GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් (Moderate Sell)"
     },
     "bias_strong_sell": {
-        "en": "🔴 STRONG SELL (Yield Pressure)",
-        "si": "🔴 දැඩි SELL පීඩනයක් (Strong Sell)"
+        "en": "🔴 GOLD (XAUUSD): STRONG SELL (Yield Headwind)",
+        "si": "🔴 GOLD (රත්රන්): දැඩි SELL පීඩනයක් (Strong Sell)"
     },
     "confidence_level": {
         "en": "Macro Conviction Score",
         "si": "සාර්ව ආර්ථික විශ්වාසනීයත්ව ලකුණු"
+    },
+    "gold_state_title": {
+        "en": "⚡ Gold Market Real-Time State & Live Wires",
+        "si": "⚡ රන් වෙළඳපොළ සජීවී තත්ත්වය සහ ක්ෂණික පුවත්"
+    },
+    "audio_alerts": {
+        "en": "🔊 Audio Notification Alerts",
+        "si": "🔊 ශබ්ද මඟින් දැනුම්දීම් (Audio Alerts)"
     },
 
     # Market Regime & Duration

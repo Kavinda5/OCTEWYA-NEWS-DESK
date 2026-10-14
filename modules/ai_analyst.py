@@ -44,24 +44,24 @@ def generate_macro_assessment(
     # Determine master bias
     if total_score >= 35:
         master_bias = "STRONG_BUY"
-        bias_label_en = "STRONG BUY (Safe-Haven & Yield Support)"
-        bias_label_si = "දැඩි BUY නැඹුරුවක් (Safe-Haven සහ Yield වාසිදායකයි)"
+        bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Safe-Haven & Yield Support)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Safe-Haven සහ Yield වාසිදායකයි)"
     elif total_score >= 12:
         master_bias = "BUY"
-        bias_label_en = "MODERATE BUY (Accumulation Bias)"
-        bias_label_si = "සාමාන්‍ය BUY නැඹුරුවක් (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
+        bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Accumulation Bias)"
+        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
     elif total_score <= -35:
         master_bias = "STRONG_SELL"
-        bias_label_en = "STRONG SELL (Treasury Yield Headwind)"
-        bias_label_si = "දැඩි SELL පීඩනයක් (බැඳුම්කර ප්‍රතිලාභ ඉහළ යාම)"
+        bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Treasury Yield Headwind)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (බැඳුම්කර ප්‍රතිලාභ ඉහළ යාම)"
     elif total_score <= -12:
         master_bias = "SELL"
-        bias_label_en = "MODERATE SELL (Distribution / Fade)"
-        bias_label_si = "සාමාන්‍ය SELL නැඹුරුවක් (විකුණුම් පීඩනයක්)"
+        bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Distribution / Fade)"
+        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (විකුණුම් පීඩනයක්)"
     else:
         master_bias = "NEUTRAL"
-        bias_label_en = "NEUTRAL / CHOPPY RANGE"
-        bias_label_si = "මධ්‍යස්ථ / පරාසයක දෝලනය වන තත්ත්වයක්"
+        bias_label_en = "GOLD (XAUUSD): NEUTRAL / RANGE 🟡 (Balanced Drivers)"
+        bias_label_si = "GOLD (රත්රන්): මධ්‍යස්ථ / RANGE 🟡 (දෝලනය වන තත්ත්වයක්)"
 
     conviction = min(max(abs(total_score) + 40, 50), 96)
 

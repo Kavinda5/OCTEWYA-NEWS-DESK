@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 from datetime import datetime, timezone, timedelta
 
@@ -35,6 +36,75 @@ def get_current_time_str(tz_key: str = "SL") -> str:
     hours, mins = tz_info[1], tz_info[2]
     dt = datetime.now(timezone.utc) + timedelta(hours=hours, minutes=mins)
     return dt.strftime("%I:%M:%S %p")
+
+def trigger_audio_alert(sound_type: str):
+    """Triggers synthetic Web Audio notification in the browser."""
+    if not sound_type or sound_type == "NONE":
+        return
+    js_code = f"""
+    <script>
+    (function() {{
+        try {{
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') {{ audioCtx.resume(); }}
+            const now = audioCtx.currentTime;
+            
+            if ("{sound_type}" === "BULLISH") {{
+                // Institutional Chime (D5 -> A5 ascending)
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(587.33, now);
+                gain1.gain.setValueAtTime(0.35, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.5);
+
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880, now + 0.12);
+                gain2.gain.setValueAtTime(0.4, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.85);
+            }} else if ("{sound_type}" === "BEARISH") {{
+                // Institutional Warning Tone (440Hz -> 311Hz double pulse)
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(440, now);
+                gain1.gain.setValueAtTime(0.4, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.22);
+
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'triangle';
+                osc2.frequency.setValueAtTime(311.13, now + 0.25);
+                gain2.gain.setValueAtTime(0.45, now + 0.25);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now + 0.25);
+                osc2.stop(now + 0.6);
+            }}
+        }} catch (e) {{
+            console.error("Audio error:", e);
+        }}
+    }})();
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
 
 # 1. Page Configuration
 st.set_page_config(
@@ -241,6 +311,18 @@ with st.sidebar:
             if api_key_input:
                 os.environ["GEMINI_API_KEY"] = api_key_input
 
+    # Audio Alerts Control
+    st.markdown("---")
+    st.markdown("### 🔊 Audio Alerts / ශබ්ද දැනුම්දීම්")
+    audio_on = st.toggle("Enable Sound Alerts", value=st.session_state.get("audio_enabled", True), key="audio_enabled_toggle")
+    st.session_state["audio_enabled"] = audio_on
+    
+    col_a1, col_a2 = st.columns(2)
+    if col_a1.button("🔔 Test Buy", use_container_width=True):
+        st.session_state["play_sound"] = "BULLISH"
+    if col_a2.button("⚠️ Test Sell", use_container_width=True):
+        st.session_state["play_sound"] = "BEARISH"
+
     # Logout Button
     st.markdown("---")
     if st.button("🚪 Logout / ඉවත් වන්න", use_container_width=True):
@@ -263,6 +345,21 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     calendar_events = fetch_dynamic_calendar(macro_data)
     precedent_data = compare_historical_precedent("CPI", macro_data["yield_pressure"], geo_data["risk_level"])
     ai_assessment = generate_macro_assessment(macro_data, geo_data, precedent_data, lang_choice)
+
+    # Audio Alert Processing
+    sound_to_trigger = st.session_state.pop("play_sound", None)
+    m_state = geo_data.get("market_state", {})
+    if st.session_state.get("audio_enabled", True) and m_state.get("state") == "FLASH_IMPACT":
+        current_alert_id = m_state.get("alert_id", "")
+        if current_alert_id and current_alert_id != st.session_state.get("last_alert_id"):
+            st.session_state["last_alert_id"] = current_alert_id
+            if m_state.get("impact_dir") == "BEARISH_DUMP":
+                sound_to_trigger = "BEARISH"
+            elif m_state.get("impact_dir") == "BULLISH_SURGE":
+                sound_to_trigger = "BULLISH"
+
+    if sound_to_trigger:
+        trigger_audio_alert(sound_to_trigger)
 
     # 5. Top Header Branding Bar
     live_tz_time = get_current_time_str(tz_choice)
@@ -380,6 +477,46 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 
     st.write("")
 
+    # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
+    m_state = geo_data.get("market_state", {})
+    state_color = m_state.get("badge_color", "#3B82F6")
+    state_badge = m_state.get("regime_badge", "🟢 NORMAL REGIME")
+    headline = m_state.get("headline", "Baseline Market Structure")
+    impact_desc = m_state.get("impact_desc_si" if lang_choice == "si" else "impact_desc_en", "")
+    action_text = m_state.get("action_si" if lang_choice == "si" else "action_en", "")
+    source = m_state.get("source", "OCTEWYA Intelligence")
+    pub_time = m_state.get("published", "Live")
+    audio_status_text = "🔊 Audio Armed" if st.session_state.get("audio_enabled", True) else "🔇 Audio Muted"
+
+    st.markdown(f"""
+    <div style="background: #111827; border: 2px solid {state_color}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="background: {state_color}; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 4px 12px; border-radius: 6px; letter-spacing: 0.5px;">
+                    {state_badge}
+                </span>
+                <span style="font-size: 13px; color: #94A3B8; font-weight: 600;">
+                    {t('gold_state_title', lang_choice)}
+                </span>
+            </div>
+            <div style="font-size: 11px; color: #64748B;">
+                <span style="color:#10B981; font-weight:700;">{audio_status_text}</span> &bull; Source: <span style="color:#CBD5E1;">{source}</span> &bull; {pub_time}
+            </div>
+        </div>
+        <div style="font-size: 17px; font-weight: 800; color: #FFFFFF; margin: 8px 0; line-height: 1.4;">
+            {headline}
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border-left: 4px solid {state_color}; padding: 10px 14px; border-radius: 4px; margin-top: 10px;">
+            <div style="font-size: 13px; color: #E2E8F0; font-weight: 600;">
+                {impact_desc}
+            </div>
+            <div style="font-size: 12px; color: #F59E0B; font-weight: 700; margin-top: 6px;">
+                🎯 {action_text}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # 8. Main Working Deck (2-Column Grid)
     left_col, right_col = st.columns([1.1, 0.9])
 
@@ -389,10 +526,10 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         
         st.markdown(f"""
         <div class="signal-box {bias_style}">
-            <div style="font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase;">
-                {t('master_signal_title', lang_choice)}
+            <div style="font-size: 13px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">
+                👑 {t('master_signal_title', lang_choice)}
             </div>
-            <div style="font-size: 26px; font-weight: 900; margin: 8px 0; color: #FFFFFF;">
+            <div style="font-size: 25px; font-weight: 900; margin: 8px 0; color: #FFFFFF; line-height: 1.3;">
                 {ai_assessment['bias_label']}
             </div>
             <div style="font-size: 13px; color: #CBD5E1;">
@@ -433,37 +570,61 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 
         st.write("")
 
-        # C. Yields Driver Analysis
+        # C. Yields Driver Analysis (Gold Impact Gauge)
         st.markdown(f"### {t('yield_analysis_title', lang_choice)}")
         st.info(f"💡 **Insight:** {t('yield_insight', lang_choice)}")
 
+        y10_val = macro_data["us10y_yield"]
         fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=macro_data["us10y_yield"],
-            delta={'reference': 4.0, 'position': "top", 'valueformat': ".2f"},
-            title={'text': "US10Y Yield vs Gold Pressure Zone", 'font': {'size': 14, 'color': '#CBD5E1'}},
+            mode="gauge+number",
+            value=y10_val,
+            number={'suffix': "%", 'font': {'size': 26, 'color': '#FFFFFF'}},
+            title={'text': "🏛️ US10Y Yield -> Direct Pressure on Gold<br><span style='font-size:11px;color:#94A3B8;'>Yields Rise = Gold Dumps 🔴 | Yields Fall = Gold Surges 🟢</span>", 'font': {'size': 13, 'color': '#CBD5E1'}},
             gauge={
-                'axis': {'range': [3.0, 5.5], 'tickcolor': "#94A3B8"},
-                'bar': {'color': "#F59E0B"},
+                'axis': {'range': [3.0, 5.5], 'tickcolor': "#94A3B8", 'ticksuffix': "%"},
+                'bar': {'color': "#F59E0B", 'thickness': 0.3},
                 'steps': [
-                    {'range': [3.0, 3.8], 'color': "rgba(16, 185, 129, 0.4)"},
-                    {'range': [3.8, 4.4], 'color': "rgba(245, 158, 11, 0.4)"},
-                    {'range': [4.4, 5.5], 'color': "rgba(239, 68, 68, 0.4)"}
+                    {'range': [3.0, 3.8], 'color': "rgba(16, 185, 129, 0.45)"},
+                    {'range': [3.8, 4.3], 'color': "rgba(245, 158, 11, 0.4)"},
+                    {'range': [4.3, 5.5], 'color': "rgba(239, 68, 68, 0.45)"}
                 ],
                 'threshold': {
-                    'line': {'color': "red", 'width': 3},
+                    'line': {'color': "#EF4444", 'width': 3},
                     'thickness': 0.75,
-                    'value': 4.5
+                    'value': 4.3
                 }
             }
         ))
         fig_gauge.update_layout(
             paper_bgcolor="#161B26",
             font={'color': "#E6EDF3"},
-            height=220,
-            margin=dict(l=20, r=20, t=30, b=20)
+            height=230,
+            margin=dict(l=20, r=20, t=40, b=20)
         )
         st.plotly_chart(fig_gauge, use_container_width=True)
+
+        if y10_val >= 4.3:
+            yield_impact_html = """
+            <div style="background: rgba(239,68,68,0.15); border: 1px solid #EF4444; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
+                <div style="color: #EF4444; font-weight: 800; font-size: 14px;">🔴 DIRECT GOLD IMPACT: HEAVY SELL PRESSURE</div>
+                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield above 4.30% creates high bond return. Money exits physical Gold into Treasuries.</div>
+            </div>
+            """
+        elif y10_val <= 3.8:
+            yield_impact_html = """
+            <div style="background: rgba(16,185,129,0.15); border: 1px solid #10B981; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
+                <div style="color: #10B981; font-weight: 800; font-size: 14px;">🟢 DIRECT GOLD IMPACT: STRONG BUY SUPPORT</div>
+                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield below 3.80% collapses Treasury yield advantage. Capital rushes into physical Gold.</div>
+            </div>
+            """
+        else:
+            yield_impact_html = """
+            <div style="background: rgba(245,158,11,0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
+                <div style="color: #F59E0B; font-weight: 800; font-size: 14px;">🟡 DIRECT GOLD IMPACT: BALANCED / NEUTRAL ZONE</div>
+                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">Yields in neutral territory (3.80% - 4.30%). Gold movement driven primarily by intraday technical liquidity and DXY.</div>
+            </div>
+            """
+        st.markdown(yield_impact_html, unsafe_allow_html=True)
 
         # D. Historical Reaction Precedent & Causality
         st.markdown(f"### {t('history_title', lang_choice)}")
