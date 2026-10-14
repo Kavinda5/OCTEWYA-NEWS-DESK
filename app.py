@@ -478,44 +478,61 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     st.write("")
 
     # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
-    m_state = geo_data.get("market_state", {})
+    m_state = geo_data.get("market_state")
+    if not m_state or not isinstance(m_state, dict):
+        m_state = {
+            "state": "NORMAL_REGIME",
+            "regime_badge": "🟢 NORMAL REGIME",
+            "headline": "Baseline Market Structure (Technical Flow & Macro Yield Drift)",
+            "source": "OCTEWYA Intelligence",
+            "published": "Active",
+            "impact_dir": "NEUTRAL",
+            "badge_color": "#3B82F6",
+            "impact_desc_en": "NORMAL MARKET REGIME: No emergency geopolitical or Fed shockwires active. Gold is following baseline technical structure and Treasury yield correlation.",
+            "impact_desc_si": "සාමාන්‍ය වෙළඳපොළ තත්ත්වය: හදිසි භූ-දේශපාලනික හෝ Fed ප්‍රවෘත්ති නොමැත. Gold සාමාන්‍ය Technical පරාසය සහ බැඳුම්කර ප්‍රතිලාභ මත පදනම්ව ගමන් කරයි.",
+            "action_en": "Standard intraday M1/M15 range scalping around key support/resistance.",
+            "action_si": "ප්‍රධාන Support/Resistance මට්ටම් අතර සාමාන්‍ය Scalping සිදුකරන්න."
+        }
+
     state_color = m_state.get("badge_color", "#3B82F6")
     state_badge = m_state.get("regime_badge", "🟢 NORMAL REGIME")
     headline = m_state.get("headline", "Baseline Market Structure")
-    impact_desc = m_state.get("impact_desc_si" if lang_choice == "si" else "impact_desc_en", "")
-    action_text = m_state.get("action_si" if lang_choice == "si" else "action_en", "")
+    
+    state_title = t('gold_state_title', lang_choice)
+    if state_title == 'gold_state_title':
+        state_title = "රන් වෙළඳපොළ සජීවී තත්ත්වය සහ ක්ෂණික පුවත්" if lang_choice == "si" else "Gold Market Real-Time State & Live Wires"
+
+    impact_desc = m_state.get("impact_desc_si" if lang_choice == "si" else "impact_desc_en")
+    if not impact_desc:
+        impact_desc = "සාමාන්‍ය වෙළඳපොළ තත්ත්වය: හදිසි භූ-දේශපාලනික හෝ Fed ප්‍රවෘත්ති නොමැත. Gold සාමාන්‍ය Technical පරාසය මත පදනම්ව ගමන් කරයි." if lang_choice == "si" else "NORMAL MARKET REGIME: No emergency shock wires active. Gold is trading within baseline technical structure."
+
+    action_text = m_state.get("action_si" if lang_choice == "si" else "action_en")
+    if not action_text:
+        action_text = "ප්‍රධාන Support/Resistance මට්ටම් අතර සාමාන්‍ය Scalping සිදුකරන්න." if lang_choice == "si" else "Standard intraday M1/M15 range scalping around key support/resistance."
+
     source = m_state.get("source", "OCTEWYA Intelligence")
     pub_time = m_state.get("published", "Live")
     audio_status_text = "🔊 Audio Armed" if st.session_state.get("audio_enabled", True) else "🔇 Audio Muted"
 
-    st.markdown(f"""
-    <div style="background: #111827; border: 2px solid {state_color}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="background: {state_color}; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 4px 12px; border-radius: 6px; letter-spacing: 0.5px;">
-                    {state_badge}
-                </span>
-                <span style="font-size: 13px; color: #94A3B8; font-weight: 600;">
-                    {t('gold_state_title', lang_choice)}
-                </span>
-            </div>
-            <div style="font-size: 11px; color: #64748B;">
-                <span style="color:#10B981; font-weight:700;">{audio_status_text}</span> &bull; Source: <span style="color:#CBD5E1;">{source}</span> &bull; {pub_time}
-            </div>
-        </div>
-        <div style="font-size: 17px; font-weight: 800; color: #FFFFFF; margin: 8px 0; line-height: 1.4;">
-            {headline}
-        </div>
-        <div style="background: rgba(0,0,0,0.3); border-left: 4px solid {state_color}; padding: 10px 14px; border-radius: 4px; margin-top: 10px;">
-            <div style="font-size: 13px; color: #E2E8F0; font-weight: 600;">
-                {impact_desc}
-            </div>
-            <div style="font-size: 12px; color: #F59E0B; font-weight: 700; margin-top: 6px;">
-                🎯 {action_text}
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    hero_html = (
+        f'<div style="background: #111827; border: 2px solid {state_color}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">'
+        f'<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">'
+        f'<div style="display: flex; align-items: center; gap: 10px;">'
+        f'<span style="background: {state_color}; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 4px 12px; border-radius: 6px; letter-spacing: 0.5px;">{state_badge}</span>'
+        f'<span style="font-size: 13px; color: #94A3B8; font-weight: 600;">{state_title}</span>'
+        f'</div>'
+        f'<div style="font-size: 11px; color: #64748B;">'
+        f'<span style="color:#10B981; font-weight:700;">{audio_status_text}</span> &bull; Source: <span style="color:#CBD5E1;">{source}</span> &bull; {pub_time}'
+        f'</div>'
+        f'</div>'
+        f'<div style="font-size: 17px; font-weight: 800; color: #FFFFFF; margin: 8px 0; line-height: 1.4;">{headline}</div>'
+        f'<div style="background: rgba(0,0,0,0.3); border-left: 4px solid {state_color}; padding: 10px 14px; border-radius: 4px; margin-top: 10px;">'
+        f'<div style="font-size: 13px; color: #E2E8F0; font-weight: 600;">{impact_desc}</div>'
+        f'<div style="font-size: 12px; color: #F59E0B; font-weight: 700; margin-top: 6px;">🎯 {action_text}</div>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(hero_html, unsafe_allow_html=True)
 
     # 8. Main Working Deck (2-Column Grid)
     left_col, right_col = st.columns([1.1, 0.9])
@@ -523,50 +540,32 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     with left_col:
         # A. Master Strategic Bias & Regime
         bias_style = "buy-signal" if "BUY" in ai_assessment["master_bias"] else ("sell-signal" if "SELL" in ai_assessment["master_bias"] else "neutral-signal")
-        
-        st.markdown(f"""
-        <div class="signal-box {bias_style}">
-            <div style="font-size: 13px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">
-                👑 {t('master_signal_title', lang_choice)}
-            </div>
-            <div style="font-size: 25px; font-weight: 900; margin: 8px 0; color: #FFFFFF; line-height: 1.3;">
-                {ai_assessment['bias_label']}
-            </div>
-            <div style="font-size: 13px; color: #CBD5E1;">
-                <b>{t('confidence_level', lang_choice)}:</b> {ai_assessment['conviction']}% | 
-                <b>Order Flow:</b> {macro_data['buyers_pct']}% Buyers vs {macro_data['sellers_pct']}% Sellers
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        master_sig_title = t('master_signal_title', lang_choice)
+        if master_sig_title == 'master_signal_title':
+            master_sig_title = "👑 ප්‍රධාන වෙළඳපොළ නැඹුරුව: GOLD (XAUUSD) INTRADAY" if lang_choice == "si" else "👑 MASTER STRATEGIC BIAS: GOLD (XAUUSD) INTRADAY"
+
+        st.markdown(f"""<div class="signal-box {bias_style}">
+<div style="font-size: 13px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">{master_sig_title}</div>
+<div style="font-size: 25px; font-weight: 900; margin: 8px 0; color: #FFFFFF; line-height: 1.3;">{ai_assessment['bias_label']}</div>
+<div style="font-size: 13px; color: #CBD5E1;"><b>{t('confidence_level', lang_choice)}:</b> {ai_assessment['conviction']}% | <b>Order Flow:</b> {macro_data['buyers_pct']}% Buyers vs {macro_data['sellers_pct']}% Sellers</div>
+</div>""", unsafe_allow_html=True)
 
         # B. Regime & Duration Predictor Card
         st.markdown(f"### {t('regime_title', lang_choice)}")
         rc1, rc2 = st.columns(2)
         with rc1:
-            st.markdown(f"""
-            <div class="ticker-card" style="text-align: left;">
-                <div class="ticker-label">{t('regime_title', lang_choice)}</div>
-                <div style="font-size: 16px; font-weight: 700; color: #F59E0B;">
-                    {t('regime_' + macro_data['regime'].lower(), lang_choice)}
-                </div>
-                <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">
-                    <b>{t('expected_duration', lang_choice)}:</b> {macro_data['estimated_duration']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="ticker-card" style="text-align: left;">
+<div class="ticker-label">{t('regime_title', lang_choice)}</div>
+<div style="font-size: 16px; font-weight: 700; color: #F59E0B;">{t('regime_' + macro_data['regime'].lower(), lang_choice)}</div>
+<div style="font-size: 12px; color: #94A3B8; margin-top: 4px;"><b>{t('expected_duration', lang_choice)}:</b> {macro_data['estimated_duration']}</div>
+</div>""", unsafe_allow_html=True)
 
         with rc2:
-            st.markdown(f"""
-            <div class="ticker-card" style="text-align: left;">
-                <div class="ticker-label">{t('breakout_risk', lang_choice)}</div>
-                <div style="font-size: 16px; font-weight: 700; color: #10B981;">
-                    {macro_data['breakout_risk_pct']}% Probability
-                </div>
-                <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">
-                    <b>ATR (M15 Volatility):</b> ±${macro_data['gold_atr']:.2f} pips
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="ticker-card" style="text-align: left;">
+<div class="ticker-label">{t('breakout_risk', lang_choice)}</div>
+<div style="font-size: 16px; font-weight: 700; color: #10B981;">{macro_data['breakout_risk_pct']}% Probability</div>
+<div style="font-size: 12px; color: #94A3B8; margin-top: 4px;"><b>ATR (M15 Volatility):</b> ±${macro_data['gold_atr']:.2f} pips</div>
+</div>""", unsafe_allow_html=True)
 
         st.write("")
 
@@ -604,26 +603,26 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         st.plotly_chart(fig_gauge, use_container_width=True)
 
         if y10_val >= 4.3:
-            yield_impact_html = """
-            <div style="background: rgba(239,68,68,0.15); border: 1px solid #EF4444; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
-                <div style="color: #EF4444; font-weight: 800; font-size: 14px;">🔴 DIRECT GOLD IMPACT: HEAVY SELL PRESSURE</div>
-                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield above 4.30% creates high bond return. Money exits physical Gold into Treasuries.</div>
-            </div>
-            """
+            yield_impact_html = (
+                '<div style="background: rgba(239,68,68,0.15); border: 1px solid #EF4444; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
+                '<div style="color: #EF4444; font-weight: 800; font-size: 14px;">🔴 DIRECT GOLD IMPACT: HEAVY SELL PRESSURE</div>'
+                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield above 4.30% creates high bond return. Money exits physical Gold into Treasuries.</div>'
+                '</div>'
+            )
         elif y10_val <= 3.8:
-            yield_impact_html = """
-            <div style="background: rgba(16,185,129,0.15); border: 1px solid #10B981; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
-                <div style="color: #10B981; font-weight: 800; font-size: 14px;">🟢 DIRECT GOLD IMPACT: STRONG BUY SUPPORT</div>
-                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield below 3.80% collapses Treasury yield advantage. Capital rushes into physical Gold.</div>
-            </div>
-            """
+            yield_impact_html = (
+                '<div style="background: rgba(16,185,129,0.15); border: 1px solid #10B981; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
+                '<div style="color: #10B981; font-weight: 800; font-size: 14px;">🟢 DIRECT GOLD IMPACT: STRONG BUY SUPPORT</div>'
+                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield below 3.80% collapses Treasury yield advantage. Capital rushes into physical Gold.</div>'
+                '</div>'
+            )
         else:
-            yield_impact_html = """
-            <div style="background: rgba(245,158,11,0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">
-                <div style="color: #F59E0B; font-weight: 800; font-size: 14px;">🟡 DIRECT GOLD IMPACT: BALANCED / NEUTRAL ZONE</div>
-                <div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">Yields in neutral territory (3.80% - 4.30%). Gold movement driven primarily by intraday technical liquidity and DXY.</div>
-            </div>
-            """
+            yield_impact_html = (
+                '<div style="background: rgba(245,158,11,0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
+                '<div style="color: #F59E0B; font-weight: 800; font-size: 14px;">🟡 DIRECT GOLD IMPACT: BALANCED / NEUTRAL ZONE</div>'
+                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">Yields in neutral territory (3.80% - 4.30%). Gold movement driven primarily by intraday technical liquidity and DXY.</div>'
+                '</div>'
+            )
         st.markdown(yield_impact_html, unsafe_allow_html=True)
 
         # D. Historical Reaction Precedent & Causality
