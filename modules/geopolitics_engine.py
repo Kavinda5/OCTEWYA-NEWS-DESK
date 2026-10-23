@@ -18,8 +18,11 @@ _GEO_CACHE = {
 WAR_BULLISH_KEYWORDS = [
     "war", "missile", "strike", "drone", "attack", "escalat", "retaliat",
     "military", "invasi", "troops", "conflict", "bomb", "explosion",
-    "sanction", "red sea", "middle east", "iran", "israel", "gaza",
-    "lebanon", "russia", "ukraine", "taiwan", "china", "nuclear", "strait of hormuz"
+    "sanction", "red sea", "middle east", "iran strike", "iran attack",
+    "israel strike", "israel attack", "gaza strike", "lebanon strike", "hezbollah",
+    "russia strike", "ukraine strike", "taiwan strait", "taiwan military",
+    "taiwan invasion", "south china sea", "nuclear", "strait of hormuz",
+    "airstrike", "air strike", "ground offensive", "artillery"
 ]
 
 FED_DOVISH_KEYWORDS = [
@@ -41,6 +44,10 @@ BEARISH_KEYWORDS = [
 ]
 
 EXCLUDE_KEYWORDS = [
+    # Weather and Natural Disasters (Zero impact on institutional Gold safe-haven flow)
+    "typhoon", "cyclone", "hurricane", "tornado", "storm", "earthquake", "tsunami",
+    "flood", "floods", "flooding", "wildfire", "volcano", "weather", "landslide",
+    "heavy rain", "huge waves", "avalanche", "heatwave", "rainstorm", "tropical storm",
     # Sports & entertainment
     "medal", "olympic", "championship", "tournament", "football", "soccer",
     "cricket", "basketball", "tennis", "golf", "f1", "formula 1", "ballon d'or",
