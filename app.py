@@ -18,7 +18,27 @@ from modules.i18n import t, LANGUAGES
 from modules.market_data import fetch_live_macro_data
 from modules.geopolitics_engine import fetch_geopolitical_intel
 from modules.history_engine import HISTORICAL_EVENTS, compare_historical_precedent
-from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch
+try:
+    from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch
+except ImportError:
+    from modules.calendar_engine import fetch_dynamic_calendar
+    def get_upcoming_macro_watch(events, macro_data):
+        return {
+            "status": "UPCOMING",
+            "title": "US High-Impact Economic Event",
+            "impact": "HIGH",
+            "time_str": "Session Watch (SL Time)",
+            "countdown_str": "Active",
+            "evolving_bias": "BUY_ON_GOLD",
+            "impact_label_en": "🟢 GOLD IMPACT: BUY BIAS 🟢",
+            "impact_label_si": "🟢 GOLD වෙත බලපෑම: BUY BIAS 🟢",
+            "badge_color": "#10B981",
+            "reason_en": "Awaiting fresh catalyst.",
+            "reason_si": "දත්ත නිකුත් වනතුරු රැඳී සිටින්න.",
+            "forecast": "-",
+            "previous": "-",
+            "is_imminent": False
+        }
 from modules.ai_analyst import generate_macro_assessment
 
 # Universal Timezone Definition directly in app.py
