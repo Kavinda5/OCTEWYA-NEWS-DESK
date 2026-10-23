@@ -58,10 +58,22 @@ def fetch_live_macro_data(ttl_seconds: int = 30) -> dict:
         "yield_spread": 0.115, # 10Y - 2Y in % (11.5 bps)
         "dxy_price": 103.85,
         "dxy_change": 0.0,
+        "oil_price": 75.00,
+        "oil_change": 0.0,
+        "oil_change_pct": 0.0,
+        "oil_spike": False,
+        "vwap": 2735.0,
+        "vwap_dist": 0.0,
+        "vwap_status": "AT_VWAP",
+        "cvd_value": 0,
+        "cvd_trend": "NEUTRAL",
+        "orderflow_event": "NORMAL_LIQUIDITY",
+        "orderflow_bias": "NEUTRAL_FLOW",
+        "yield_momentum_desc": "Flat / Neutral Yield Drift",
         "buyers_pct": 58,
         "sellers_pct": 42,
-        "yield_pressure": "BEARISH_ON_GOLD", # or "BULLISH_ON_GOLD", "NEUTRAL"
-        "regime": "COMPRESSION", # "COMPRESSION", "EXPANSION", "ORDERLY_TREND"
+        "yield_pressure": "NEUTRAL",
+        "regime": "COMPRESSION",
         "estimated_duration": "1 - 2 Hours",
         "breakout_risk_pct": 65,
         "gold_history": None,
@@ -104,7 +116,6 @@ def fetch_live_macro_data(ttl_seconds: int = 30) -> dict:
         if not irx_hist.empty and not fvx_hist.empty:
             irx_val = irx_hist.iloc[-1]["Close"]
             fvx_val = fvx_hist.iloc[-1]["Close"]
-            # 2Y yield is approximated reliably by 0.6 * IRX + 0.4 * FVX
             derived_2y = (0.55 * irx_val) + (0.45 * fvx_val)
             prev_2y = (0.55 * irx_hist.iloc[-2]["Close"]) + (0.45 * fvx_hist.iloc[-2]["Close"]) if len(irx_hist) > 1 else derived_2y
             result["us02y_yield"] = float(derived_2y)
@@ -124,34 +135,115 @@ def fetch_live_macro_data(ttl_seconds: int = 30) -> dict:
             result["dxy_price"] = float(latest_dxy)
             result["dxy_change"] = float(latest_dxy - prev_dxy)
 
+        # 5. Fetch Crude Oil (CL=F) for Energy / War Surge Detection
+        try:
+            oil = yf.Ticker("CL=F")
+            oil_hist = oil.history(period="3d", interval="1d")
+            if not oil_hist.empty:
+                latest_oil = float(oil_hist.iloc[-1]["Close"])
+                prev_oil = float(oil_hist.iloc[-2]["Close"]) if len(oil_hist) > 1 else latest_oil
+                result["oil_price"] = latest_oil
+                result["oil_change"] = float(latest_oil - prev_oil)
+                result["oil_change_pct"] = float((result["oil_change"] / prev_oil) * 100) if prev_oil > 0 else 0.0
+                result["oil_spike"] = (result["oil_change_pct"] >= 1.8)
+        except Exception:
+            pass
+
+        # 6. Quantitative Order Flow & VWAP Analysis (5m Intraday Bars)
+        try:
+            g_5m = gold.history(period="1d", interval="5m")
+            if not g_5m.empty and g_5m["Volume"].sum() > 0:
+                tp = (g_5m["High"] + g_5m["Low"] + g_5m["Close"]) / 3.0
+                vol = g_5m["Volume"].replace(0, 1)
+                vwap_series = (tp * vol).cumsum() / vol.cumsum()
+                curr_vwap = float(vwap_series.iloc[-1])
+                curr_price = float(g_5m["Close"].iloc[-1])
+                result["vwap"] = curr_vwap
+                result["vwap_dist"] = curr_price - curr_vwap
+                result["vwap_status"] = "ABOVE_VWAP" if result["vwap_dist"] > 0.5 else ("BELOW_VWAP" if result["vwap_dist"] < -0.5 else "AT_VWAP")
+
+                # Cumulative Volume Delta (CVD)
+                delta_bar = np.where(g_5m["Close"] >= g_5m["Open"], g_5m["Volume"], -g_5m["Volume"])
+                cvd_series = delta_bar.cumsum()
+                result["cvd_value"] = int(cvd_series.iloc[-1])
+                
+                # Check recent 6 bars (last 30 mins) CVD slope
+                recent_cvd = cvd_series.iloc[-6:] if len(cvd_series) >= 6 else cvd_series
+                if recent_cvd.iloc[-1] > recent_cvd.iloc[0] + 50:
+                    result["cvd_trend"] = "BUYER_DOMINANT"
+                elif recent_cvd.iloc[-1] < recent_cvd.iloc[0] - 50:
+                    result["cvd_trend"] = "SELLER_DOMINANT"
+                else:
+                    result["cvd_trend"] = "NEUTRAL"
+
+                # Absorption & Exhaustion Detection on last bar
+                last_bar = g_5m.iloc[-1]
+                bar_range = max(last_bar["High"] - last_bar["Low"], 0.2)
+                upper_wick = last_bar["High"] - max(last_bar["Open"], last_bar["Close"])
+                lower_wick = min(last_bar["Open"], last_bar["Close"]) - last_bar["Low"]
+                avg_vol = g_5m["Volume"].tail(15).mean()
+                curr_vol = last_bar["Volume"]
+
+                if (lower_wick / bar_range > 0.45) and (curr_vol > avg_vol * 1.15):
+                    result["orderflow_event"] = "BULLISH_ABSORPTION"
+                elif (upper_wick / bar_range > 0.45) and (curr_vol > avg_vol * 1.15):
+                    result["orderflow_event"] = "BEARISH_ABSORPTION"
+                elif (curr_vol < avg_vol * 0.55) and (curr_price > curr_vwap + 5.0):
+                    result["orderflow_event"] = "BUYER_EXHAUSTION"
+                elif (curr_vol < avg_vol * 0.55) and (curr_price < curr_vwap - 5.0):
+                    result["orderflow_event"] = "SELLER_EXHAUSTION"
+                else:
+                    result["orderflow_event"] = "NORMAL_LIQUIDITY"
+
+                # Combined Order Flow Bias
+                if result["vwap_status"] == "ABOVE_VWAP" and result["cvd_trend"] == "BUYER_DOMINANT":
+                    result["orderflow_bias"] = "BULLISH_FLOW"
+                elif result["vwap_status"] == "BELOW_VWAP" and result["cvd_trend"] == "SELLER_DOMINANT":
+                    result["orderflow_bias"] = "BEARISH_FLOW"
+                elif result["orderflow_event"] == "BULLISH_ABSORPTION":
+                    result["orderflow_bias"] = "BULLISH_FLOW"
+                elif result["orderflow_event"] == "BEARISH_ABSORPTION":
+                    result["orderflow_bias"] = "BEARISH_FLOW"
+                else:
+                    result["orderflow_bias"] = "MIXED_FLOW"
+        except Exception:
+            pass
+
     except Exception as e:
         # Keep realistic default fallbacks if network has brief glitch
         pass
 
-    # 5. Calculate Quantitative Buyer vs Seller Dominance Ratio
-    # Based on price position relative to session range & candle momentum
+    # 7. Calculate Quantitative Buyer vs Seller Dominance Ratio
     high_low_range = max(result["gold_high"] - result["gold_low"], 1.0)
     pos_in_range = (result["gold_price"] - result["gold_low"]) / high_low_range
     
-    # Base calculation adjusted by recent yield pressure
-    base_buyers = int(pos_in_range * 70 + 15) # maps between 15% to 85%
-    if result["us10y_change"] > 0.05: # Rising yields suppress buyers
-        base_buyers -= 8
-    elif result["us10y_change"] < -0.05: # Falling yields boost buyers
+    # Base calculation adjusted by order flow and yield pressure
+    base_buyers = int(pos_in_range * 60 + 20)
+    if result["us10y_change"] > 0.02:
+        base_buyers -= 7
+    elif result["us10y_change"] < -0.02:
+        base_buyers += 7
+
+    if result.get("orderflow_bias") == "BULLISH_FLOW":
         base_buyers += 8
+    elif result.get("orderflow_bias") == "BEARISH_FLOW":
+        base_buyers -= 8
 
     result["buyers_pct"] = max(min(base_buyers, 88), 12)
     result["sellers_pct"] = 100 - result["buyers_pct"]
 
-    # 6. Yield Pressure Score on Gold
-    if result["us10y_change"] > 0.03 and result["us02y_change"] > 0.03:
-        result["yield_pressure"] = "BEARISH_ON_GOLD" # Rising yields = Gold Sell
-    elif result["us10y_change"] < -0.03 and result["us02y_change"] < -0.03:
-        result["yield_pressure"] = "BULLISH_ON_GOLD" # Falling yields = Gold Buy
+    # 8. Dynamic Yield Momentum on Gold (Intraday Delta)
+    if result["us10y_change"] < -0.015:
+        result["yield_pressure"] = "BULLISH_ON_GOLD"
+        result["yield_momentum_desc"] = "Falling Yields (Bullish Gold Tailwinds)"
+    elif result["us10y_change"] > 0.015:
+        result["yield_pressure"] = "BEARISH_ON_GOLD"
+        result["yield_momentum_desc"] = "Rising Yields (Bearish Sell Pressure)"
     else:
         result["yield_pressure"] = "NEUTRAL"
+        result["yield_momentum_desc"] = "Flat / Neutral Yield Drift"
 
-    # 7. Regime & Move Duration
+    # 9. Regime & Move Duration
     if result["gold_history"] is not None and len(result["gold_history"]) >= 5:
         recent_bars = result["gold_history"].tail(5)
         bar_range_avg = (recent_bars["High"] - recent_bars["Low"]).mean()

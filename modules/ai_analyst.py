@@ -28,42 +28,82 @@ def generate_macro_assessment(
     regime = macro_data.get("regime", "COMPRESSION")
     est_duration = macro_data.get("estimated_duration", "1 - 2 Hours")
     safe_score = geo_data.get("score", 30)
+    market_state = geo_data.get("market_state", {})
+    impact_dir = market_state.get("impact_dir", "NEUTRAL") if isinstance(market_state, dict) else "NEUTRAL"
+    orderflow_bias = macro_data.get("orderflow_bias", "MIXED_FLOW")
+    oil_spike = macro_data.get("oil_spike", False)
 
-    # Calculate overall strategic score (-100 to +100)
-    # Yield pressure has high negative correlation with gold
-    yield_score = -35 if yield_pressure == "BEARISH_ON_GOLD" else (35 if yield_pressure == "BULLISH_ON_GOLD" else 0)
+    # 1. Yields momentum score (-30 to +30)
+    yield_score = -30 if yield_pressure == "BEARISH_ON_GOLD" else (30 if yield_pressure == "BULLISH_ON_GOLD" else 0)
     
-    # Safe haven score is positive for gold
-    geo_score = int((safe_score - 30) * 0.8) # positive when war tension > 30
+    # 2. Geopolitical tension score (-20 to +35)
+    geo_score = int((safe_score - 30) * 0.7)
+    if oil_spike:
+        geo_score += 15 # Crude surge boosts safe-haven hedge
 
-    # Order flow positioning
-    buyer_score = int((buyers_pct - 50) * 0.9)
+    # 3. Order flow & Buyer/Seller Dominance (-30 to +30)
+    of_score = 0
+    if orderflow_bias == "BULLISH_FLOW":
+        of_score = 25
+    elif orderflow_bias == "BEARISH_FLOW":
+        of_score = -25
+    buyer_score = int((buyers_pct - 50) * 0.6)
 
-    total_score = yield_score + geo_score + buyer_score
+    # 4. Flash wire shock impact
+    shock_score = 0
+    if impact_dir == "BEARISH_DUMP":
+        shock_score = -35
+    elif impact_dir == "BULLISH_SURGE":
+        shock_score = 35
+
+    total_score = yield_score + geo_score + of_score + buyer_score + shock_score
 
     # Determine master bias
     if total_score >= 35:
         master_bias = "STRONG_BUY"
-        bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Safe-Haven & Yield Support)"
-        bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Safe-Haven සහ Yield වාසිදායකයි)"
+        bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Flow & Yield Aligned)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Order Flow සහ Yield එකඟයි)"
     elif total_score >= 12:
         master_bias = "BUY"
         bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Accumulation Bias)"
         bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
     elif total_score <= -35:
         master_bias = "STRONG_SELL"
-        bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Treasury Yield Headwind)"
-        bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (බැඳුම්කර ප්‍රතිලාභ ඉහළ යාම)"
+        bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Liquidation & Yield Drag)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (විකුණුම් පීඩනය සහ Yield Headwind)"
     elif total_score <= -12:
         master_bias = "SELL"
         bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Distribution / Fade)"
         bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (විකුණුම් පීඩනයක්)"
     else:
         master_bias = "NEUTRAL"
-        bias_label_en = "GOLD (XAUUSD): NEUTRAL / RANGE 🟡 (Balanced Drivers)"
-        bias_label_si = "GOLD (රත්රන්): මධ්‍යස්ථ / RANGE 🟡 (දෝලනය වන තත්ත්වයක්)"
+        bias_label_en = "GOLD (XAUUSD): NEUTRAL / RANGE 🟡 (Mixed Signals - Stay in Cash)"
+        bias_label_si = "GOLD (රත්රන්): මධ්‍යස්ථ / RANGE 🟡 (සංඥා පටලැවිලි සහිතයි - Trade ගැනීමෙන් වළකින්න)"
 
-    conviction = min(max(abs(total_score) + 40, 50), 96)
+    conviction = min(max(abs(total_score) + 35, 50), 96)
+
+    # 5. Shock Horizon & Divergence Conflict Detection
+    if (orderflow_bias == "BULLISH_FLOW" or master_bias in ["BUY", "STRONG_BUY"]) and impact_dir == "BEARISH_DUMP":
+        shock_status = "SHOCK_REVERSAL_RISK"
+        shock_title_en = "⚠️ SHOCK REVERSAL ALERT: Flow is BUY, but Hawkish/Yield Dump Wire Detected!"
+        shock_title_si = "⚠️ අවධානය: වෙළඳපොළ BUY වුවත්, හදිසි SELL/DUMP News එකක් නිසා කඩා වැටීමේ අවදානමක් ඇත!"
+        shock_action_en = "Do NOT chase Longs! High institutional liquidation risk."
+        shock_action_si = "නව BUY ගැනීමෙන් වළකින්න! ක්ෂණික කඩා වැටීමේ අවදානමක් ඇත."
+        shock_color = "#EF4444"
+    elif (orderflow_bias == "BEARISH_FLOW" or master_bias in ["SELL", "STRONG_SELL"]) and (impact_dir == "BULLISH_SURGE" or oil_spike):
+        shock_status = "GEOPOLITICAL_PUMP_RISK"
+        shock_title_en = "🚀 EVENT OVERRIDE ALERT: Flow is SELL, but War Shock / USOIL Surge Detected!"
+        shock_title_si = "🚀 අවධානය: වෙළඳපොළ SELL වුවත්, යුද පුවත් හෝ USOIL මිල ඉහළ යාමක් නිසා හදිසි BUY Surge අවදානමක් ඇත!"
+        shock_action_en = "Do NOT Short! Rapid safe-haven spike possible."
+        shock_action_si = "Short (Sell) ගැනීමෙන් වළකින්න! ආරක්ෂිත ආයෝජන මිලදී ගැනීමක් සිදුවිය හැක."
+        shock_color = "#10B981"
+    else:
+        shock_status = "CLEAR"
+        shock_title_en = "🛡️ EVENT HORIZON: STABLE (No Shock Threat)"
+        shock_title_si = "🛡️ පුවත් අවදානම: ස්ථාවරයි (හදිසි තර්ජන නොමැත)"
+        shock_action_en = "Market drivers are orderly. Trade standard intraday pullbacks."
+        shock_action_si = "වෙළඳපොළ තත්ත්වය ස්ථාවරයි. Pullbacks වලදී සාමාන්‍ය පරිදි Trade කරන්න."
+        shock_color = "#3B82F6"
 
     # Key Invalidation Levels for M1/M15 scalpers
     invalidation_up = round(gold_price + (gold_atr * 1.2), 2)
@@ -147,5 +187,11 @@ Keep it practical, professional, without generic disclaimers.
         "total_score": total_score,
         "invalidation_up": invalidation_up,
         "invalidation_down": invalidation_down,
-        "narrative": ai_narrative
+        "narrative": ai_narrative,
+        "shock_warning": {
+            "status": shock_status,
+            "title": shock_title_si if lang == "si" else shock_title_en,
+            "action": shock_action_si if lang == "si" else shock_action_en,
+            "color": shock_color
+        }
     }

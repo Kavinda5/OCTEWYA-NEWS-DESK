@@ -18,7 +18,7 @@ from modules.i18n import t, LANGUAGES
 from modules.market_data import fetch_live_macro_data
 from modules.geopolitics_engine import fetch_geopolitical_intel
 from modules.history_engine import HISTORICAL_EVENTS, compare_historical_precedent
-from modules.calendar_engine import fetch_dynamic_calendar
+from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch
 from modules.ai_analyst import generate_macro_assessment
 
 # Universal Timezone Definition directly in app.py
@@ -343,6 +343,7 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     macro_data = fetch_live_macro_data()
     geo_data = fetch_geopolitical_intel()
     calendar_events = fetch_dynamic_calendar(macro_data)
+    macro_watch = get_upcoming_macro_watch(calendar_events, macro_data)
     precedent_data = compare_historical_precedent("CPI", macro_data["yield_pressure"], geo_data["risk_level"])
     ai_assessment = generate_macro_assessment(macro_data, geo_data, precedent_data, lang_choice)
 
@@ -357,6 +358,13 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
                 sound_to_trigger = "BEARISH"
             elif m_state.get("impact_dir") == "BULLISH_SURGE":
                 sound_to_trigger = "BULLISH"
+
+    # Imminent Macro Event Audio Warning (5 minutes before major release)
+    if st.session_state.get("audio_enabled", True) and macro_watch.get("is_imminent"):
+        event_key = macro_watch.get("title", "") + "_imminent"
+        if event_key != st.session_state.get("last_imminent_key"):
+            st.session_state["last_imminent_key"] = event_key
+            sound_to_trigger = "BEARISH" # Warning chime
 
     if sound_to_trigger:
         trigger_audio_alert(sound_to_trigger)
@@ -406,13 +414,19 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         """, unsafe_allow_html=True)
 
     with c3:
-        y2_delta_class = "ticker-delta-green" if macro_data["us02y_change"] >= 0 else "ticker-delta-red"
-        y2_sign = "+" if macro_data["us02y_change"] >= 0 else ""
+        oil_price = macro_data.get("oil_price", 75.0)
+        oil_chg = macro_data.get("oil_change", 0.0)
+        oil_pct = macro_data.get("oil_change_pct", 0.0)
+        oil_spike = macro_data.get("oil_spike", False)
+        oil_delta_class = "ticker-delta-red" if oil_spike else ("ticker-delta-green" if oil_chg >= 0 else "ticker-delta-red")
+        oil_sign = "+" if oil_chg >= 0 else ""
+        oil_tag = " ⚡ SPIKE" if oil_spike else ""
+        oil_label = "CRUDE OIL (USOIL)" if lang_choice == "en" else "බොරතෙල් (USOIL)"
         st.markdown(f"""
         <div class="ticker-card">
-            <div class="ticker-label">{t("us02y_yield", lang_choice)}</div>
-            <div class="ticker-value">{macro_data['us02y_yield']:.3f}%</div>
-            <div class="{y2_delta_class}">{y2_sign}{macro_data['us02y_change']:.3f} pts</div>
+            <div class="ticker-label">{oil_label}{oil_tag}</div>
+            <div class="ticker-value">${oil_price:.2f}</div>
+            <div class="{oil_delta_class}">{oil_sign}${oil_chg:.2f} ({oil_sign}{oil_pct:.2f}%)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -514,8 +528,24 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     pub_time = m_state.get("published", "Live")
     audio_status_text = "🔊 Audio Armed" if st.session_state.get("audio_enabled", True) else "🔇 Audio Muted"
 
+    watch_status = macro_watch.get("status", "UPCOMING")
+    watch_title = macro_watch.get("title", "High-Impact USD Release")
+    watch_time = macro_watch.get("time_str", "")
+    watch_countdown = macro_watch.get("countdown_str", "")
+    watch_impact_label = macro_watch.get("impact_label_si" if lang_choice == "si" else "impact_label_en", "GOLD IMPACT")
+    watch_badge_color = macro_watch.get("badge_color", "#10B981")
+    watch_reason = macro_watch.get("reason_si" if lang_choice == "si" else "reason_en", "")
+
+    watch_header = "⏱️ ඉදිරි ප්‍රධාන ආර්ථික සිදුවීම" if lang_choice == "si" else "⏱️ UPCOMING HIGH-IMPACT MACRO EVENT"
+    if watch_status == "POST_RELEASE":
+        watch_header = "📊 නිකුත් වූ දත්ත හා වෙළඳපොළ ප්‍රතිඵලය" if lang_choice == "si" else "📊 POST-RELEASE OUTCOME TRACKER"
+    elif watch_status == "IMMINENT":
+        watch_header = "⚠️ නිකුත් වීමට ආසන්නයි (අවදානම්!)" if lang_choice == "si" else "⚠️ RELEASE IMMINENT (HIGH VOLATILITY!)"
+
     hero_html = (
         f'<div style="background: #111827; border: 2px solid {state_color}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">'
+        f'<div style="display: flex; gap: 24px; align-items: stretch; flex-wrap: wrap;">'
+        f'<div style="flex: 1.15; min-width: 320px; border-right: 1px solid #1E293B; padding-right: 18px;">'
         f'<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">'
         f'<div style="display: flex; align-items: center; gap: 10px;">'
         f'<span style="background: {state_color}; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 4px 12px; border-radius: 6px; letter-spacing: 0.5px;">{state_badge}</span>'
@@ -525,10 +555,26 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         f'<span style="color:#10B981; font-weight:700;">{audio_status_text}</span> &bull; Source: <span style="color:#CBD5E1;">{source}</span> &bull; {pub_time}'
         f'</div>'
         f'</div>'
-        f'<div style="font-size: 17px; font-weight: 800; color: #FFFFFF; margin: 8px 0; line-height: 1.4;">{headline}</div>'
+        f'<div style="font-size: 16px; font-weight: 800; color: #FFFFFF; margin: 8px 0; line-height: 1.4;">{headline}</div>'
         f'<div style="background: rgba(0,0,0,0.3); border-left: 4px solid {state_color}; padding: 10px 14px; border-radius: 4px; margin-top: 10px;">'
-        f'<div style="font-size: 13px; color: #E2E8F0; font-weight: 600;">{impact_desc}</div>'
+        f'<div style="font-size: 12px; color: #E2E8F0; font-weight: 600;">{impact_desc}</div>'
         f'<div style="font-size: 12px; color: #F59E0B; font-weight: 700; margin-top: 6px;">🎯 {action_text}</div>'
+        f'</div>'
+        f'</div>'
+        f'<div style="flex: 0.95; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">'
+        f'<div>'
+        f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+        f'<span style="color: #94A3B8; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{watch_header}</span>'
+        f'<span style="background: rgba(245,158,11,0.2); color: #F59E0B; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">⏳ {watch_countdown}</span>'
+        f'</div>'
+        f'<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; line-height: 1.3;">📰 {watch_title}</div>'
+        f'<div style="font-size: 12px; color: #38BDF8; font-weight: 700; margin-top: 3px;">⏰ {watch_time}</div>'
+        f'</div>'
+        f'<div style="background: rgba(0,0,0,0.5); border: 2px solid {watch_badge_color}; border-radius: 8px; padding: 10px; margin: 8px 0; text-align: center; box-shadow: 0 0 16px {watch_badge_color}33;">'
+        f'<div style="font-size: 17px; font-weight: 900; color: {watch_badge_color}; letter-spacing: 0.5px; text-transform: uppercase;">{watch_impact_label}</div>'
+        f'</div>'
+        f'<div style="font-size: 11px; color: #94A3B8; line-height: 1.3;"><b>💡 Insight:</b> {watch_reason}</div>'
+        f'</div>'
         f'</div>'
         f'</div>'
     )
@@ -569,61 +615,85 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 
         st.write("")
 
-        # C. Yields Driver Analysis (Gold Impact Gauge)
-        st.markdown(f"### {t('yield_analysis_title', lang_choice)}")
-        st.info(f"💡 **Insight:** {t('yield_insight', lang_choice)}")
+        # C. Real-Time Gold Action & Shock Radar (Replaces static yields gauge)
+        shock = ai_assessment.get("shock_warning", {})
+        shock_status = shock.get("status", "CLEAR")
+        shock_title = shock.get("title", "🛡️ EVENT HORIZON: STABLE")
+        shock_action = shock.get("action", "Market drivers are orderly.")
+        shock_color = shock.get("color", "#3B82F6")
 
-        y10_val = macro_data["us10y_yield"]
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=y10_val,
-            number={'suffix': "%", 'font': {'size': 26, 'color': '#FFFFFF'}},
-            title={'text': "🏛️ US10Y Yield -> Direct Pressure on Gold<br><span style='font-size:11px;color:#94A3B8;'>Yields Rise = Gold Dumps 🔴 | Yields Fall = Gold Surges 🟢</span>", 'font': {'size': 13, 'color': '#CBD5E1'}},
-            gauge={
-                'axis': {'range': [3.0, 5.5], 'tickcolor': "#94A3B8", 'ticksuffix': "%"},
-                'bar': {'color': "#F59E0B", 'thickness': 0.3},
-                'steps': [
-                    {'range': [3.0, 3.8], 'color': "rgba(16, 185, 129, 0.45)"},
-                    {'range': [3.8, 4.3], 'color': "rgba(245, 158, 11, 0.4)"},
-                    {'range': [4.3, 5.5], 'color': "rgba(239, 68, 68, 0.45)"}
-                ],
-                'threshold': {
-                    'line': {'color': "#EF4444", 'width': 3},
-                    'thickness': 0.75,
-                    'value': 4.3
-                }
-            }
-        ))
-        fig_gauge.update_layout(
-            paper_bgcolor="#161B26",
-            font={'color': "#E6EDF3"},
-            height=230,
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        radar_title = "⚡ සජීවී වෙළඳපොළ දිශාව සහ පුවත් අවදානම් රේඩාර්" if lang_choice == "si" else "⚡ Real-Time Gold Action & Shock Radar"
+        st.markdown(f"### {radar_title}")
 
-        if y10_val >= 4.3:
-            yield_impact_html = (
-                '<div style="background: rgba(239,68,68,0.15); border: 1px solid #EF4444; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
-                '<div style="color: #EF4444; font-weight: 800; font-size: 14px;">🔴 DIRECT GOLD IMPACT: HEAVY SELL PRESSURE</div>'
-                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield above 4.30% creates high bond return. Money exits physical Gold into Treasuries.</div>'
-                '</div>'
-            )
-        elif y10_val <= 3.8:
-            yield_impact_html = (
-                '<div style="background: rgba(16,185,129,0.15); border: 1px solid #10B981; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
-                '<div style="color: #10B981; font-weight: 800; font-size: 14px;">🟢 DIRECT GOLD IMPACT: STRONG BUY SUPPORT</div>'
-                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">US10Y Yield below 3.80% collapses Treasury yield advantage. Capital rushes into physical Gold.</div>'
-                '</div>'
+        # 1. Event Shock Reversal Warning Box
+        if shock_status != "CLEAR":
+            shock_box_html = (
+                f'<div style="background: rgba(0,0,0,0.4); border: 2px solid {shock_color}; border-radius: 10px; padding: 14px 18px; margin-bottom: 15px;">'
+                f'<div style="color: {shock_color}; font-weight: 900; font-size: 15px;">{shock_title}</div>'
+                f'<div style="color: #F8FAFC; font-size: 13px; font-weight: 600; margin-top: 5px;">👉 {shock_action}</div>'
+                f'</div>'
             )
         else:
-            yield_impact_html = (
-                '<div style="background: rgba(245,158,11,0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 10px 14px; text-align: center; margin-top: -15px;">'
-                '<div style="color: #F59E0B; font-weight: 800; font-size: 14px;">🟡 DIRECT GOLD IMPACT: BALANCED / NEUTRAL ZONE</div>'
-                '<div style="color: #CBD5E1; font-size: 11px; margin-top: 3px;">Yields in neutral territory (3.80% - 4.30%). Gold movement driven primarily by intraday technical liquidity and DXY.</div>'
-                '</div>'
+            shock_box_html = (
+                f'<div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 15px;">'
+                f'<div style="color: #10B981; font-weight: 800; font-size: 14px;">{shock_title}</div>'
+                f'<div style="color: #94A3B8; font-size: 12px; margin-top: 3px;">{shock_action}</div>'
+                f'</div>'
             )
-        st.markdown(yield_impact_html, unsafe_allow_html=True)
+        st.markdown(shock_box_html, unsafe_allow_html=True)
+
+        # 2. 3 Tactical Drivers Cards (Order Flow, Yield Momentum, Oil Spike Watch)
+        k1, k2, k3 = st.columns(3)
+        with k1:
+            vwap_val = macro_data.get("vwap", macro_data["gold_price"])
+            vwap_dist = macro_data.get("vwap_dist", 0.0)
+            vwap_color = "#10B981" if vwap_dist >= 0 else "#EF4444"
+            vwap_badge = "Above VWAP (Bullish)" if vwap_dist >= 0 else "Below VWAP (Bearish)"
+            of_event = macro_data.get("orderflow_event", "NORMAL_LIQUIDITY").replace("_", " ")
+
+            st.markdown(
+                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
+                f'<div class="ticker-label">🌊 INTRADAY VWAP & LIQUIDITY</div>'
+                f'<div style="font-size: 15px; font-weight: 800; color: {vwap_color}; margin-top: 4px;">${vwap_val:.2f}</div>'
+                f'<div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;"><b>Pos:</b> <span style="color:{vwap_color};">{vwap_badge}</span></div>'
+                f'<div style="font-size: 11px; color: #94A3B8; margin-top: 2px;"><b>Event:</b> {of_event}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        with k2:
+            y10_val = macro_data["us10y_yield"]
+            y10_chg = macro_data["us10y_change"]
+            y_color = "#10B981" if y10_chg < -0.01 else ("#EF4444" if y10_chg > 0.01 else "#F59E0B")
+            y_desc = macro_data.get("yield_momentum_desc", "Neutral Yield Drift")
+
+            st.markdown(
+                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
+                f'<div class="ticker-label">🏛️ US10Y YIELD MOMENTUM</div>'
+                f'<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">{y10_val:.3f}% <span style="font-size:12px; color:{y_color};">({y10_chg:+.3f}%)</span></div>'
+                f'<div style="font-size: 11px; color: {y_color}; font-weight: 700; margin-top: 2px;">{y_desc}</div>'
+                f'<div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">2Y/10Y Spread: {macro_data["yield_spread"]:+.2f}%</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        with k3:
+            y2_val = macro_data.get("us02y_yield", 4.10)
+            y2_chg = macro_data.get("us02y_change", 0.0)
+            spread_val = macro_data.get("yield_spread", 0.10)
+            spread_color = "#10B981" if spread_val > 0 else "#EF4444"
+            spread_status = "Normal Curve (Steepening)" if spread_val > 0 else "Inverted Curve (Recession Watch)"
+            y2_color = "#10B981" if y2_chg < -0.01 else ("#EF4444" if y2_chg > 0.01 else "#F59E0B")
+
+            st.markdown(
+                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
+                f'<div class="ticker-label">⚡ 2Y/10Y SPREAD & FED PROXY</div>'
+                f'<div style="font-size: 15px; font-weight: 800; color: {spread_color}; margin-top: 4px;">{spread_val:+.3f}% <span style="font-size:11px; color:#94A3B8;">(10Y - 2Y)</span></div>'
+                f'<div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;"><b>US 02Y:</b> {y2_val:.3f}% <span style="color:{y2_color}; font-weight:700;">({y2_chg:+.3f} pts)</span></div>'
+                f'<div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">{spread_status}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
         # D. Historical Reaction Precedent & Causality
         st.markdown(f"### {t('history_title', lang_choice)}")
