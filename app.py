@@ -585,6 +585,38 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     watch_badge_color = macro_watch.get("badge_color", "#10B981")
     watch_reason = macro_watch.get("reason_si" if lang_choice == "si" else "reason_en", "")
 
+    # Last Completed Event Scorecard & After-Movement Radar
+    scorecard = macro_watch.get("last_event_scorecard")
+    scorecard_html = ""
+    if scorecard:
+        acc_label = scorecard.get("accuracy_label_si" if lang_choice == "si" else "accuracy_label_en", "")
+        acc_clr = scorecard.get("accuracy_color", "#10B981")
+        mov_state = scorecard.get("movement_state_si" if lang_choice == "si" else "movement_state_en", "")
+        mov_desc = scorecard.get("movement_desc_si" if lang_choice == "si" else "movement_desc_en", "")
+        mov_clr = scorecard.get("movement_color", "#10B981")
+        imb_note = scorecard.get("imbalance_note_si" if lang_choice == "si" else "imbalance_note_en", "")
+        imb_badge = scorecard.get("imbalance_badge", "")
+        sc_title = "📌 පෙර පුවතේ ප්‍රතිඵලය සහ වෙළඳපොළ ගමන" if lang_choice == "si" else "📌 LAST EVENT OUTCOME & AFTER-MOVEMENT"
+
+        scorecard_html = (
+            f'<div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #283347; border-radius: 8px; padding: 10px 12px; margin-top: 10px;">'
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
+            f'<span style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">{sc_title}</span>'
+            f'<span style="background: {acc_clr}22; color: {acc_clr}; border: 1px solid {acc_clr}; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{acc_label}</span>'
+            f'</div>'
+            f'<div style="font-size: 12px; color: #E2E8F0; font-weight: 700;">📰 {scorecard.get("title")}</div>'
+            f'<div style="font-size: 11px; color: #64748B; margin-top: 2px;">⏰ {scorecard.get("released_time")}</div>'
+            f'<div style="margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid {mov_clr};">'
+            f'<div style="font-size: 11px; font-weight: 800; color: {mov_clr};">🚀 {mov_state}</div>'
+            f'<div style="font-size: 10px; color: #94A3B8; margin-top: 2px; line-height: 1.3;">{mov_desc}</div>'
+            f'</div>'
+            f'<div style="margin-top: 6px; padding: 6px 8px; background: rgba(30, 41, 59, 0.5); border-radius: 4px;">'
+            f'<div style="font-size: 10px; font-weight: 800; color: #F59E0B;">{imb_badge}</div>'
+            f'<div style="font-size: 10px; color: #CBD5E1; line-height: 1.3; margin-top: 2px;">{imb_note}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
     watch_header = "⏱️ ඉදිරි ප්‍රධාන ආර්ථික සිදුවීම" if lang_choice == "si" else "⏱️ UPCOMING HIGH-IMPACT MACRO EVENT"
     if watch_status == "POST_RELEASE":
         watch_header = "📊 නිකුත් වූ දත්ත හා වෙළඳපොළ ප්‍රතිඵලය" if lang_choice == "si" else "📊 POST-RELEASE OUTCOME TRACKER"
@@ -623,6 +655,7 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         f'<div style="font-size: 17px; font-weight: 900; color: {watch_badge_color}; letter-spacing: 0.5px; text-transform: uppercase;">{watch_impact_label}</div>'
         f'</div>'
         f'<div style="font-size: 11px; color: #94A3B8; line-height: 1.3;"><b>💡 Insight:</b> {watch_reason}</div>'
+        f'{scorecard_html}'
         f'</div>'
         f'</div>'
         f'</div>'
