@@ -58,8 +58,9 @@ EXCLUDE_KEYWORDS = [
     "biography", "memoir", "iron curtain", "opinion", "column", "editorial",
     # Metaphorical war & Political campaigns
     "trade war", "price war", "war on inflation", "war on drugs", "culture war", "bidding war",
-    "attack ad", "attack ads", "political attack", "attack on policy", "verbal attack",
-    "election attack", "campaign attack", "commercial attack", "slams opponent"
+    "attack ad", "attack ads", "political attack", "political attacks", "attack on policy", "verbal attack", "verbal attacks",
+    "election attack", "campaign attack", "commercial attack", "slams opponent",
+    "renews attack", "renews attacks", "attacks amid", "attack probe", "campaign trail", "poll attack", "rally attack", "omar"
 ]
 
 GOLD_EXPLICIT_BEARISH = [
