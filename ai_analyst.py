@@ -1,0 +1,267 @@
+"""
+AI Analyst & Strategic Synthesis Engine
+Produces comprehensive institutional analysis in Sinhala and English,
+supporting both Gemini API (google-genai) and a built-in deterministic quantitative model.
+"""
+
+import os
+from google import genai
+from google.genai import types
+
+def generate_macro_assessment(
+    macro_data: dict,
+    geo_data: dict,
+    precedent_data: dict,
+    lang: str = "si"
+) -> dict:
+    """
+    Synthesizes all real-time factors into an actionable M1/M15 intraday game plan.
+    """
+    gold_price = macro_data.get("gold_price", 2735.0)
+    gold_atr = macro_data.get("gold_atr", 14.0)
+    us10y = macro_data.get("us10y_yield", 4.22)
+    us02y = macro_data.get("us02y_yield", 4.11)
+    yield_spread = macro_data.get("yield_spread", 0.11)
+    yield_pressure = macro_data.get("yield_pressure", "NEUTRAL")
+    buyers_pct = macro_data.get("buyers_pct", 55)
+    sellers_pct = macro_data.get("sellers_pct", 45)
+    regime = macro_data.get("regime", "COMPRESSION")
+    est_duration = macro_data.get("estimated_duration", "1 - 2 Hours")
+    safe_score = geo_data.get("score", 30)
+    market_state = geo_data.get("market_state", {})
+    impact_dir = market_state.get("impact_dir", "NEUTRAL") if isinstance(market_state, dict) else "NEUTRAL"
+    orderflow_bias = macro_data.get("orderflow_bias", "MIXED_FLOW")
+    oil_spike = macro_data.get("oil_spike", False)
+
+    # 1. Yields momentum score (-30 to +30)
+    yield_score = -30 if yield_pressure == "BEARISH_ON_GOLD" else (30 if yield_pressure == "BULLISH_ON_GOLD" else 0)
+    
+    # 2. Geopolitical tension score (-20 to +35)
+    geo_score = int((safe_score - 30) * 0.7)
+    if oil_spike:
+        geo_score += 15 # Crude surge boosts safe-haven hedge
+
+    # 3. Order flow & Buyer/Seller Dominance (-30 to +30)
+    of_score = 0
+    if orderflow_bias == "BULLISH_FLOW":
+        of_score = 25
+    elif orderflow_bias == "BEARISH_FLOW":
+        of_score = -25
+    buyer_score = int((buyers_pct - 50) * 0.6)
+
+    # 4. Flash wire shock impact
+    shock_score = 0
+    if impact_dir == "BEARISH_DUMP":
+        shock_score = -35
+    elif impact_dir == "BULLISH_SURGE":
+        shock_score = 35
+
+    total_score = yield_score + geo_score + of_score + buyer_score + shock_score
+
+    # Determine master bias
+    if total_score >= 35:
+        master_bias = "STRONG_BUY"
+        bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Flow & Yield Aligned)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Order Flow සහ Yield එකඟයි)"
+    elif total_score >= 12:
+        master_bias = "BUY"
+        bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Accumulation Bias)"
+        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
+    elif total_score <= -35:
+        master_bias = "STRONG_SELL"
+        bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Liquidation & Yield Drag)"
+        bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (විකුණුම් පීඩනය සහ Yield Headwind)"
+    elif total_score <= -12:
+        master_bias = "SELL"
+        bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Distribution / Fade)"
+        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (විකුණුම් පීඩනයක්)"
+    else:
+        master_bias = "NEUTRAL"
+        bias_label_en = "GOLD (XAUUSD): NEUTRAL / RANGE 🟡 (Mixed Signals - Stay in Cash)"
+        bias_label_si = "GOLD (රත්රන්): මධ්‍යස්ථ / RANGE 🟡 (සංඥා පටලැවිලි සහිතයි - Trade ගැනීමෙන් වළකින්න)"
+
+    conviction = min(max(abs(total_score) + 35, 50), 96)
+
+    # 5. Shock Horizon & Divergence Conflict Detection
+    if (orderflow_bias == "BULLISH_FLOW" or master_bias in ["BUY", "STRONG_BUY"]) and impact_dir == "BEARISH_DUMP":
+        shock_status = "SHOCK_REVERSAL_RISK"
+        shock_title_en = "⚠️ SHOCK REVERSAL ALERT: Flow is BUY, but Hawkish/Yield Dump Wire Detected!"
+        shock_title_si = "⚠️ අවධානය: වෙළඳපොළ BUY වුවත්, හදිසි SELL/DUMP News එකක් නිසා කඩා වැටීමේ අවදානමක් ඇත!"
+        shock_action_en = "Do NOT chase Longs! High institutional liquidation risk."
+        shock_action_si = "නව BUY ගැනීමෙන් වළකින්න! ක්ෂණික කඩා වැටීමේ අවදානමක් ඇත."
+        shock_color = "#EF4444"
+    elif (orderflow_bias == "BEARISH_FLOW" or master_bias in ["SELL", "STRONG_SELL"]) and (impact_dir == "BULLISH_SURGE" or oil_spike):
+        shock_status = "GEOPOLITICAL_PUMP_RISK"
+        shock_title_en = "🚀 EVENT OVERRIDE ALERT: Flow is SELL, but War Shock / USOIL Surge Detected!"
+        shock_title_si = "🚀 අවධානය: වෙළඳපොළ SELL වුවත්, යුද පුවත් හෝ USOIL මිල ඉහළ යාමක් නිසා හදිසි BUY Surge අවදානමක් ඇත!"
+        shock_action_en = "Do NOT Short! Rapid safe-haven spike possible."
+        shock_action_si = "Short (Sell) ගැනීමෙන් වළකින්න! ආරක්ෂිත ආයෝජන මිලදී ගැනීමක් සිදුවිය හැක."
+        shock_color = "#10B981"
+    else:
+        shock_status = "CLEAR"
+        shock_title_en = "🛡️ EVENT HORIZON: STABLE (No Shock Threat)"
+        shock_title_si = "🛡️ පුවත් අවදානම: ස්ථාවරයි (හදිසි තර්ජන නොමැත)"
+        shock_action_en = "Market drivers are orderly. Trade standard intraday pullbacks."
+        shock_action_si = "වෙළඳපොළ තත්ත්වය ස්ථාවරයි. Pullbacks වලදී සාමාන්‍ය පරිදි Trade කරන්න."
+        shock_color = "#3B82F6"
+
+    # Key Invalidation Levels for M1/M15 scalpers
+    invalidation_up = round(gold_price + (gold_atr * 1.2), 2)
+    invalidation_down = round(gold_price - (gold_atr * 1.2), 2)
+
+    # Try Gemini API if API key exists
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    ai_narrative = ""
+
+    if gemini_key:
+        try:
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+You are an institutional macro strategist specializing in XAUUSD (Gold) scalping/intraday trading.
+Analyze the following real-time conditions:
+- Gold Price: {gold_price:.2f} (ATR: {gold_atr:.2f})
+- US 10Y Yield: {us10y:.3f}%, US 02Y Yield: {us02y:.3f}% (Yield Spread: {yield_spread:.3f}%)
+- Yield Pressure on Gold: {yield_pressure}
+- Order Flow: {buyers_pct}% Buyers vs {sellers_pct}% Sellers
+- Geopolitical Safe-Haven Score: {safe_score}/100
+- Market Regime: {regime} (Estimated Duration: {est_duration})
+- Master Calculated Bias: {master_bias}
+
+Language requested: {"Sinhala (සිංහල)" if lang == "si" else "English"}
+Provide a sharp, 3-point trading summary:
+1. Primary Driver & Direction (Why yields and safe-haven dictate the direction)
+2. Scalp Duration Profile (Will this be a 15-minute spike or sustained multi-hour trend? How long will range consolidation last?)
+3. Invalidation Zone & Risk Guideline (Key levels around {invalidation_down} and {invalidation_up}).
+Keep it practical, professional, without generic disclaimers.
+"""
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            if response and response.text:
+                ai_narrative = response.text
+        except Exception:
+            ai_narrative = ""
+
+    # High-quality deterministic fallback narrative
+    if not ai_narrative:
+        if lang == "si":
+            ai_narrative = f"""
+### 📊 ආයතනික සාර්ව ආර්ථික විශ්ලේෂණය (OCTEWYA Strategy):
+
+1. **ප්‍රධාන වෙළඳපොළ ධාවකය (Yields & Safe-Haven):**
+   * වත්මන් **US10Y ({us10y:.2f}%)** සහ **US02Y ({us02y:.2f}%)** බැඳුම්කර ප්‍රතිලාභ මට්ටම Gold සඳහා **{yield_pressure}** තත්ත්වයක පවතී.
+   * භූ-දේශපාලනික යුද අවදානම් දර්ශකය **{safe_score}/100** මට්ටමක ඇති බැවින්, ආරක්ෂිත තෝතැන්න (Safe-Haven) ඉල්ලුම වෙළඳපොළේ Buy පීඩනයට සහය දක්වයි.
+   * වෙළඳපොළේ ගැණුම්කරුවන් **{buyers_pct}%** සහ විකුණුම්කරුවන් **{sellers_pct}%** ලෙස සටහන් වන අතර, සමස්ත නැඹුරුව **{bias_label_si}** වේ.
+
+2. **චලනයේ කාලසීමාව සහ Regime එක (Duration & Consolidation):**
+   * වෙළඳපොළ මේ වන විට **{regime}** තත්ත්වයක පවතින අතර, මෙම පරාසය තව **{est_duration}** පමණ පැවතිය හැක.
+   * Breakout එකක් සිදුවුවහොත්, එය **M1/M5/M15** timeframe තුළ වේගවත් **±120 සිට ±220 pips** දක්වා වූ චලනයක් වීමට වැඩි ඉඩක් ඇත.
+
+3. **තීරණාත්මක Invalidation සහ Risk මට්ටම්:**
+   * ඉහළ Breakout සීමාව: **${invalidation_up}** (මෙහිදී Buy Momentum තවදුරටත් තහවුරු වේ).
+   * පහළ Breakout සීමාව: **${invalidation_down}** (මෙම සීමාව කැඩී ගියහොත් Sell පීඩනය වේගවත් වේ).
+"""
+        else:
+            ai_narrative = f"""
+### 📊 Institutional Macro Playbook (OCTEWYA Strategy):
+
+1. **Primary Macro Drivers (Yields & Geopolitical Safe-Haven):**
+   * Benchmark **US10Y ({us10y:.2f}%)** and **US02Y ({us02y:.2f}%)** are currently producing a **{yield_pressure}** effect on non-yielding bullion.
+   * The Geopolitical War Tension Index is registering at **{safe_score}/100**, sustaining background safe-haven bids.
+   * Order flow proxy displays **{buyers_pct}% Buyers vs {sellers_pct}% Sellers**, anchoring an overall **{bias_label_en}**.
+
+2. **Market Regime & Horizon Duration:**
+   * Gold is currently operating in a **{regime}** state with an estimated timeframe horizon of **{est_duration}**.
+   * Any pending volatility breakout carries an anticipated target trajectory of **±120 to ±220 pips**.
+
+3. **Key Invalidation & Scalp Risk Zones:**
+   * Bullish Acceleration Ceiling: **${invalidation_up}**
+   * Bearish Liquidation Floor: **${invalidation_down}**
+"""
+
+    return {
+        "master_bias": master_bias,
+        "bias_label": bias_label_si if lang == "si" else bias_label_en,
+        "conviction": conviction,
+        "total_score": total_score,
+        "invalidation_up": invalidation_up,
+        "invalidation_down": invalidation_down,
+        "narrative": ai_narrative,
+        "shock_warning": {
+            "status": shock_status,
+            "title": shock_title_si if lang == "si" else shock_title_en,
+            "action": shock_action_si if lang == "si" else shock_action_en,
+            "color": shock_color
+        }
+    }
+
+
+def generate_pre_news_scenario_matrix(macro_watch: dict, current_macro: dict, lang: str = "si") -> dict:
+    """
+    Generates a 3-way Pre-News Scenario Matrix (Clean Sell vs Whipsaw Trap Reversal vs Clean Buy)
+    to guide traders through conflicting releases and prevent getting trapped in 100-pip fakeouts.
+    """
+    gold_price = current_macro.get("gold_price", 2730.0)
+    dominant_event = macro_watch.get("dominant_event", "Key US Macro Release")
+    cluster_count = macro_watch.get("cluster_count", 1)
+
+    dump_target_1 = round(gold_price - 12.0, 1) # ~120 pips
+    dump_target_2 = round(gold_price - 25.0, 1) # ~250 pips
+    pump_target_1 = round(gold_price + 14.0, 1) # ~140 pips
+    pump_target_2 = round(gold_price + 28.0, 1) # ~280 pips
+    whipsaw_trap_low = round(gold_price - 7.0, 1) # ~70 pips fake drop
+    whipsaw_pump_target = round(gold_price + 35.0, 1) # ~350 pips massive reversal
+
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    ai_matrix = None
+    if gemini_key:
+        try:
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+You are an elite quantitative macro fund strategist analyzing an upcoming US economic event cluster for XAUUSD (Gold).
+Upcoming Cluster: {macro_watch.get('title')} ({cluster_count} releases)
+Dominant Anchor Event: {dominant_event} (Weight {macro_watch.get('dominant_weight', 8)}/10)
+Current Gold Price: ${gold_price:.2f}
+
+Provide a concise, tabular 3-Scenario Playbook in {"Sinhala" if lang == "si" else "English"}:
+Scenario A: All Cluster Releases Beat (Hot Economy/Inflation) -> Direct Clean Sell
+Scenario B: Divergence / Conflicting Whipsaw Trap (Lower tier beats, Dominant anchor misses) -> Fake initial dump into trap zone ${whipsaw_trap_low}, then massive BUY reversal to ${whipsaw_pump_target}.
+Scenario C: All Cluster Releases Miss (Cooling Economy/Soft Inflation) -> Direct Clean Buy
+
+Format clearly with markdown table for quick reading during high-speed execution.
+"""
+            res = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            if res and res.text:
+                ai_matrix = res.text
+        except Exception:
+            ai_matrix = None
+
+    if not ai_matrix:
+        if lang == "si":
+            ai_matrix = f"""
+| අවස්ථාව (Scenario) | ආර්ථික තත්ත්වය (Cluster Condition) | Gold ක්‍රියාකාරිත්වය (Action) | අපේක්ෂිත Target |
+| :--- | :--- | :--- | :--- |
+| **Scenario A: Clean Sell (සෘජු කඩා වැටීම)** | පුවත් {cluster_count}ම Forecast ඉක්මවා Hot ලෙස පැමිණීම (Strong Economy/USD). | සෘජු තනි Red Candle SELL. Retracement නොමැතිව පහළටම ගමන් කරයි. | **${dump_target_1} - ${dump_target_2}** (-120 to -250 pips) |
+| **Scenario B: Whipsaw Trap (බොරු Sell එකෙන් පසු Massive Buy)** | සුළු පුවත් Beat වී, ප්‍රමුඛ **{dominant_event}** Miss වීම. | ආරම්භක තත්පර 30 තුළ ${whipsaw_trap_low} දක්වා Trap Dump එකක්. ඉන්පසු දැවැන්ත ආයතනික BUY Reversal! | **${whipsaw_trap_low} (Trap)** ➡️ **${whipsaw_pump_target} (Reversal)** (+350 pips) |
+| **Scenario C: Clean Buy (සෘජු ඉහළ යාම)** | පුවත් {cluster_count}ම Forecast වලට වඩා Cool/Miss වීම (Weak USD / Fed Cuts). | සෘජු තනි Green Candle BUY. Dip බලාපොරොත්තු නොවී ඉහළටම රොකට් වේ. | **${pump_target_1} - ${pump_target_2}** (+140 to +280 pips) |
+"""
+        else:
+            ai_matrix = f"""
+| Scenario | Cluster Condition | Gold Market Action | Price Target |
+| :--- | :--- | :--- | :--- |
+| **Scenario A: Clean Sell** | All {cluster_count} releases beat expectations (Hot USD). | Direct single-candle institutional liquidation. | **${dump_target_1} - ${dump_target_2}** (-120 to -250 pips) |
+| **Scenario B: Whipsaw Trap Reversal** | Minor data beats, but Dominant **{dominant_event}** misses. | Initial 40-70 pip fake dump into ${whipsaw_trap_low}, followed by violent +350 pip BUY surge. | **${whipsaw_trap_low} (Trap Floor)** ➡️ **${whipsaw_pump_target}** (+350 pips) |
+| **Scenario C: Clean Buy** | All {cluster_count} releases miss expectations (Cool USD). | Direct single-candle expansion higher. | **${pump_target_1} - ${pump_target_2}** (+140 to +280 pips) |
+"""
+
+    return {
+        "matrix_text": ai_matrix,
+        "dump_target_1": dump_target_1,
+        "pump_target_1": pump_target_1,
+        "whipsaw_trap_low": whipsaw_trap_low,
+        "whipsaw_pump_target": whipsaw_pump_target
+    }

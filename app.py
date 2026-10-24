@@ -39,7 +39,7 @@ except ImportError:
             "previous": "-",
             "is_imminent": False
         }
-from modules.ai_analyst import generate_macro_assessment
+from modules.ai_analyst import generate_macro_assessment, generate_pre_news_scenario_matrix
 
 # Universal Timezone Definition directly in app.py
 TIMEZONES = {
@@ -305,9 +305,9 @@ with st.sidebar:
 
     auto_refresh_sec = st.selectbox(
         "⚡ Auto Refresh / ස්වයංක්‍රීය යාවත්කාලීන",
-        options=[30, 60, 120, 0],
-        format_func=lambda s: "Off (Manual)" if s == 0 else f"Every {s} seconds",
-        index=0
+        options=[2, 5, 10, 15, 30, 60, 120, 0],
+        format_func=lambda s: "Off (Manual)" if s == 0 else ("⚡ Sniper Turbo (2s)" if s == 2 else f"Every {s} seconds"),
+        index=4 # Default Every 30 seconds
     )
     
     st.markdown("---")
@@ -407,6 +407,24 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # News Sniper High-Frequency Banner
+    is_sniper_active = macro_watch.get("is_imminent", False) or (macro_watch.get("status") == "POST_RELEASE" and macro_watch.get("mins_ago", 1) <= 3)
+    if is_sniper_active:
+        sniper_lbl = "⚡ NEWS SNIPER WINDOW ACTIVE: HIGH-VOLATILITY CLUSTER ARMED" if lang_choice == "en" else "⚡ NEWS SNIPER සක්‍රීයයි: ඉහළ චලනයක් සහිත පුවත් කවුළුව"
+        sniper_sub = f"Dominant Anchor: {macro_watch.get('dominant_event', 'Key Event')} (Weight: {macro_watch.get('dominant_weight', 5)}/10) • Anti-Fakeout Protection Active"
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, #7F1D1D 0%, #B91C1C 100%); border: 1px solid #EF4444; color: #FFFFFF; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">⚡</span>
+                <div>
+                    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px;">{sniper_lbl}</div>
+                    <div style="font-size: 11px; color: #FECACA;">{sniper_sub}</div>
+                </div>
+            </div>
+            <span style="background: rgba(0,0,0,0.4); border: 1px solid #FECACA; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; color: #FEE2E2;">REAL-TIME SNIPER</span>
+        </div>
+        """, unsafe_allow_html=True)
 
     # 6. Top Ticker Row (Gold, US10Y, US02Y, Spread, DXY, Buyers vs Sellers)
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -599,6 +617,17 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         f'</div>'
     )
     st.markdown(hero_html, unsafe_allow_html=True)
+
+    # Pre-News 3-Scenario Matrix (Clean Sell vs Whipsaw Trap vs Clean Buy)
+    scenario_matrix = generate_pre_news_scenario_matrix(macro_watch, macro_data, lang_choice)
+    matrix_expander_title = "🎯 AI Pre-News 3-Scenario Playbook (පූර්ව අවස්ථා 3 සහ Whipsaw Trap සැලසුම)" if lang_choice == "si" else "🎯 AI Pre-News 3-Scenario Playbook (Divergence & Whipsaw Traps)"
+    with st.expander(matrix_expander_title, expanded=(macro_watch.get("is_whipsaw", False) or macro_watch.get("is_imminent", False))):
+        st.markdown(scenario_matrix["matrix_text"])
+        st.markdown(f"""
+        <div style="background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8B5CF6; padding: 10px 14px; border-radius: 4px; font-size: 12px; color: #E2E8F0; margin-top: 8px;">
+            <b>🧠 Institutional Trading Rule:</b> {"පළමු news එකට Market එක තත්පර කිහිපයකින් Pip 50-100ක් පහළට Dump වුවත්, ප්‍රමුඛ දත්තය (Dominant Metric) පරස්පර වුවහොත් (Miss), එම Dump එක Sell Trap එකකි! එහිදී Sell වලට නොපැන, පහළ Trap මට්ටමේදී Massive Buy Reversal එකක් බලාපොරොත්තු වන්න." if lang_choice == "si" else "If secondary data beats but the Dominant Anchor misses, the initial 50-100 pip dump is an institutional liquidity trap. Do NOT chase shorts; prepare for violent 300+ pip buy reversal!"}
+        </div>
+        """, unsafe_allow_html=True)
 
     # 8. Main Working Deck (2-Column Grid)
     left_col, right_col = st.columns([1.1, 0.9])
