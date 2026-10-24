@@ -39,7 +39,18 @@ except ImportError:
             "previous": "-",
             "is_imminent": False
         }
-from modules.ai_analyst import generate_macro_assessment, generate_pre_news_scenario_matrix
+try:
+    from modules.ai_analyst import generate_macro_assessment, generate_pre_news_scenario_matrix
+except ImportError:
+    from modules.ai_analyst import generate_macro_assessment
+    def generate_pre_news_scenario_matrix(macro_watch, current_macro, lang="si"):
+        return {
+            "matrix_text": "Awaiting module sync.",
+            "dump_target_1": 0,
+            "pump_target_1": 0,
+            "whipsaw_trap_low": 0,
+            "whipsaw_pump_target": 0
+        }
 
 # Universal Timezone Definition directly in app.py
 TIMEZONES = {
