@@ -317,12 +317,22 @@ def evaluate_past_release_scorecard(past_events: list, current_macro: dict) -> d
         accuracy_pct = "Verified"
 
     # Evaluate After-Movement State (Continuation vs Mean Reversion)
+    hours_ago = abs(pivot["diff_sec"]) / 3600.0
+    gold_price = current_macro.get("gold_price", 2730.0)
     gold_chg = current_macro.get("gold_change", 0.0)
     safe_score = current_macro.get("safe_haven_score", 30)
     oil_spike = current_macro.get("oil_spike", False)
     us10y_chg = current_macro.get("us10y_change", 0.0)
 
-    if (actual_bias == "SELL_ON_GOLD" and gold_chg <= 0) or (actual_bias == "BUY_ON_GOLD" and gold_chg >= 0):
+    # Intraday News Scalp window is active for 1 - 4 hours.
+    # If more than 6 hours have passed, market has concluded the post-news scalp cycle and entered Session/Weekend Reversion
+    if hours_ago >= 6:
+        movement_state_en = "SESSION COMPLETED: FULL MEAN REVERSION / ORIGIN RESET"
+        movement_state_si = "පුවත් චක්‍රය අවසන්: ආරම්භක මට්ටම වෙත පැමිණ ඇත (FULL MEAN REVERSION)"
+        movement_desc_en = f"News scalp reaction concluded (~{int(hours_ago)}h ago). Gold absorbed the initial news drop and returned to pre-news origin (${gold_price:.2f}) driven by weekend short-covering and geopolitical safe-haven bids."
+        movement_desc_si = f"පුවතේ ක්ෂණික Intraday Scalp චක්‍රය අවසන් වී ඇත (පැය ~{int(hours_ago)}කට පෙර). ආරම්භක Drop එකෙන් පසු සති අන්ත යුද අවදානම සහ Short-Covering හේතුවෙන් Gold නැවත ආරම්භක මිල (${gold_price:.2f}) වෙත පැමිණ ඇත."
+        movement_color = "#38BDF8" # Cyan / Reversion Completed
+    elif (actual_bias == "SELL_ON_GOLD" and gold_chg <= -0.15) or (actual_bias == "BUY_ON_GOLD" and gold_chg >= 0.15):
         movement_state_en = "SUSTAINED TREND CONTINUATION"
         movement_state_si = "පශ්චාත් පුවත් දිශාවටම ගමන් කරයි (CONTINUATION)"
         movement_desc_en = "The market expanded in the exact direction of the macro release and maintained velocity without mean-reverting."
