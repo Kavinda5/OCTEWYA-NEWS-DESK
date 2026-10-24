@@ -56,8 +56,10 @@ EXCLUDE_KEYWORDS = [
     "cold war", "history", "historic", "historical", "archive", "archives",
     "book", "memorial", "museum", "anniversary", "documentary", "retrospective",
     "biography", "memoir", "iron curtain", "opinion", "column", "editorial",
-    # Metaphorical war
-    "trade war", "price war", "war on inflation", "war on drugs", "culture war", "bidding war"
+    # Metaphorical war & Political campaigns
+    "trade war", "price war", "war on inflation", "war on drugs", "culture war", "bidding war",
+    "attack ad", "attack ads", "political attack", "attack on policy", "verbal attack",
+    "election attack", "campaign attack", "commercial attack", "slams opponent"
 ]
 
 GOLD_EXPLICIT_BEARISH = [

@@ -195,3 +195,73 @@ Keep it practical, professional, without generic disclaimers.
             "color": shock_color
         }
     }
+
+
+def generate_pre_news_scenario_matrix(macro_watch: dict, current_macro: dict, lang: str = "si") -> dict:
+    """
+    Generates a 3-way Pre-News Scenario Matrix (Clean Sell vs Whipsaw Trap Reversal vs Clean Buy)
+    to guide traders through conflicting releases and prevent getting trapped in 100-pip fakeouts.
+    """
+    gold_price = current_macro.get("gold_price", 2730.0)
+    dominant_event = macro_watch.get("dominant_event", "Key US Macro Release")
+    cluster_count = macro_watch.get("cluster_count", 1)
+
+    dump_target_1 = round(gold_price - 12.0, 1) # ~120 pips
+    dump_target_2 = round(gold_price - 25.0, 1) # ~250 pips
+    pump_target_1 = round(gold_price + 14.0, 1) # ~140 pips
+    pump_target_2 = round(gold_price + 28.0, 1) # ~280 pips
+    whipsaw_trap_low = round(gold_price - 7.0, 1) # ~70 pips fake drop
+    whipsaw_pump_target = round(gold_price + 35.0, 1) # ~350 pips massive reversal
+
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    ai_matrix = None
+    if gemini_key:
+        try:
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+You are an elite quantitative macro fund strategist analyzing an upcoming US economic event cluster for XAUUSD (Gold).
+Upcoming Cluster: {macro_watch.get('title')} ({cluster_count} releases)
+Dominant Anchor Event: {dominant_event} (Weight {macro_watch.get('dominant_weight', 8)}/10)
+Current Gold Price: ${gold_price:.2f}
+
+Provide a concise, tabular 3-Scenario Playbook in {"Sinhala" if lang == "si" else "English"}:
+Scenario A: All Cluster Releases Beat (Hot Economy/Inflation) -> Direct Clean Sell
+Scenario B: Divergence / Conflicting Whipsaw Trap (Lower tier beats, Dominant anchor misses) -> Fake initial dump into trap zone ${whipsaw_trap_low}, then massive BUY reversal to ${whipsaw_pump_target}.
+Scenario C: All Cluster Releases Miss (Cooling Economy/Soft Inflation) -> Direct Clean Buy
+
+Format clearly with markdown table for quick reading during high-speed execution.
+"""
+            res = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            if res and res.text:
+                ai_matrix = res.text
+        except Exception:
+            ai_matrix = None
+
+    if not ai_matrix:
+        if lang == "si":
+            ai_matrix = f"""
+| අවස්ථාව (Scenario) | ආර්ථික තත්ත්වය (Cluster Condition) | Gold ක්‍රියාකාරිත්වය (Action) | අපේක්ෂිත Target |
+| :--- | :--- | :--- | :--- |
+| **Scenario A: Clean Sell (සෘජු කඩා වැටීම)** | පුවත් {cluster_count}ම Forecast ඉක්මවා Hot ලෙස පැමිණීම (Strong Economy/USD). | සෘජු තනි Red Candle SELL. Retracement නොමැතිව පහළටම ගමන් කරයි. | **${dump_target_1} - ${dump_target_2}** (-120 to -250 pips) |
+| **Scenario B: Whipsaw Trap (බොරු Sell එකෙන් පසු Massive Buy)** | සුළු පුවත් Beat වී, ප්‍රමුඛ **{dominant_event}** Miss වීම. | ආරම්භක තත්පර 30 තුළ ${whipsaw_trap_low} දක්වා Trap Dump එකක්. ඉන්පසු දැවැන්ත ආයතනික BUY Reversal! | **${whipsaw_trap_low} (Trap)** ➡️ **${whipsaw_pump_target} (Reversal)** (+350 pips) |
+| **Scenario C: Clean Buy (සෘජු ඉහළ යාම)** | පුවත් {cluster_count}ම Forecast වලට වඩා Cool/Miss වීම (Weak USD / Fed Cuts). | සෘජු තනි Green Candle BUY. Dip බලාපොරොත්තු නොවී ඉහළටම රොකට් වේ. | **${pump_target_1} - ${pump_target_2}** (+140 to +280 pips) |
+"""
+        else:
+            ai_matrix = f"""
+| Scenario | Cluster Condition | Gold Market Action | Price Target |
+| :--- | :--- | :--- | :--- |
+| **Scenario A: Clean Sell** | All {cluster_count} releases beat expectations (Hot USD). | Direct single-candle institutional liquidation. | **${dump_target_1} - ${dump_target_2}** (-120 to -250 pips) |
+| **Scenario B: Whipsaw Trap Reversal** | Minor data beats, but Dominant **{dominant_event}** misses. | Initial 40-70 pip fake dump into ${whipsaw_trap_low}, followed by violent +350 pip BUY surge. | **${whipsaw_trap_low} (Trap Floor)** ➡️ **${whipsaw_pump_target}** (+350 pips) |
+| **Scenario C: Clean Buy** | All {cluster_count} releases miss expectations (Cool USD). | Direct single-candle expansion higher. | **${pump_target_1} - ${pump_target_2}** (+140 to +280 pips) |
+"""
+
+    return {
+        "matrix_text": ai_matrix,
+        "dump_target_1": dump_target_1,
+        "pump_target_1": pump_target_1,
+        "whipsaw_trap_low": whipsaw_trap_low,
+        "whipsaw_pump_target": whipsaw_pump_target
+    }
