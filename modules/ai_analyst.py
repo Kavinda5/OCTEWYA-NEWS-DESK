@@ -58,23 +58,69 @@ def generate_macro_assessment(
 
     total_score = yield_score + geo_score + of_score + buyer_score + shock_score
 
-    # Determine master bias
-    if total_score >= 35:
+    # Flow vs Macro Divergence Detection (Prevents false "Aligned" labels when flow contradicts macro)
+    is_macro_bullish = (total_score >= 12 or shock_score > 0 or geo_score > 10)
+    is_macro_bearish = (total_score <= -12 or shock_score < 0 or yield_score < -15)
+    
+    is_flow_bearish = (sellers_pct >= 60 or orderflow_bias == "BEARISH_FLOW")
+    is_flow_bullish = (buyers_pct >= 60 or orderflow_bias == "BULLISH_FLOW")
+    
+    divergence_warning_si = ""
+    divergence_warning_en = ""
+    divergence_action_si = ""
+    divergence_action_en = ""
+    is_divergent = False
+
+    if is_macro_bullish and is_flow_bearish:
+        is_divergent = True
+        master_bias = "BUY_PULLBACK_DIVERGENCE"
+        bias_label_en = f"GOLD (XAUUSD): BUY DIVERGENCE ⚠️ (Macro Bullish, but 15M Flow is {sellers_pct}% Sellers)"
+        bias_label_si = f"GOLD (රත්රන්): BUY DIVERGENCE ⚠️ (Macro Buy වුවද, 15M Flow හි {sellers_pct}% විකුණුම් පීඩනයක්)"
+        divergence_warning_si = f"අවධානය: භූ-දේශපාලනික / ප්‍රවෘත්ති පසුබිමෙන් BUY පීඩනයක් තිබුණද, 15M Order Flow එකේ {sellers_pct}% ක විකුණුම්කරුවන් ලාභ ගනිමින් සිටින බැවින් උඩදී Buy නොකරන්න! කෙටි කාලීන Pullback එක අවසන් වන තෙක් බලා සිටින්න."
+        divergence_warning_en = f"WARNING: Macro & Safe-Haven factors are Bullish, but 15M Order Flow shows {sellers_pct}% Sellers taking profit. Do NOT chase Longs at highs! Await intraday pullback completion."
+        divergence_action_si = "ඉහළ මට්ටම් වලදී BUY නොපනින්න! 15M Pullback එක Support / VPOC වෙත එන තෙක් ඉවසන්න."
+        divergence_action_en = "Do NOT buy the top! Wait for 15M pullback to exhaust into key support / VPOC."
+    elif is_macro_bearish and is_flow_bullish:
+        is_divergent = True
+        master_bias = "SELL_SQUEEZE_DIVERGENCE"
+        bias_label_en = f"GOLD (XAUUSD): SELL DIVERGENCE ⚠️ (Macro Bearish, but 15M Flow is {buyers_pct}% Squeeze)"
+        bias_label_si = f"GOLD (රත්රන්): SELL DIVERGENCE ⚠️ (Macro Sell වුවද, 15M Flow හි {buyers_pct}% Short Squeeze එකක්)"
+        divergence_warning_si = f"අවධානය: බැඳුම්කර Yields නිසා Macro පසුබිම SELL වුවද, 15M Order Flow හි {buyers_pct}% ගැණුම්කරුවන්ගේ Short Squeeze එකක් පවතින බැවින් පහළදී Sell නොකරන්න!"
+        divergence_warning_en = f"WARNING: Macro Yields are Bearish, but 15M Order Flow shows {buyers_pct}% Buyers driving a Short Squeeze. Do NOT short into momentum; wait for resistance test."
+        divergence_action_si = "පහළ මට්ටම් වලදී SELL නොපනින්න! Squeeze එක Resistance මට්ටමකදී අවසන් වන තෙක් රැඳී සිටින්න."
+        divergence_action_en = "Do NOT short the lows! Wait for squeeze exhaustion at resistance."
+    elif total_score >= 35:
         master_bias = "STRONG_BUY"
-        bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Flow & Yield Aligned)"
-        bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Order Flow සහ Yield එකඟයි)"
+        if buyers_pct >= 55:
+            bias_label_en = "GOLD (XAUUSD): STRONG BUY 🟢 (Flow & Macro 100% Aligned)"
+            bias_label_si = "GOLD (රත්රන්): දැඩි BUY නැඹුරුවක් 🟢 (Order Flow සහ Macro 100% එකඟයි)"
+        else:
+            bias_label_en = "GOLD (XAUUSD): STRONG MACRO BUY 🟢 (Safe-Haven / News Driver Dominant)"
+            bias_label_si = "GOLD (රත්රන්): දැඩි MACRO BUY නැඹුරුවක් 🟢 (පුවත් සහ යුද අවදානම් පීඩනය)"
     elif total_score >= 12:
         master_bias = "BUY"
-        bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Accumulation Bias)"
-        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
+        if buyers_pct >= 52:
+            bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Accumulation Bias)"
+            bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (ගැණුම්කරුවන්ගේ එකතුවීමක්)"
+        else:
+            bias_label_en = "GOLD (XAUUSD): MODERATE BUY 🟢 (Macro Tailwinds)"
+            bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය BUY නැඹුරුවක් 🟢 (සාර්ව ආර්ථික සහයෝගය)"
     elif total_score <= -35:
         master_bias = "STRONG_SELL"
-        bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Liquidation & Yield Drag)"
-        bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (විකුණුම් පීඩනය සහ Yield Headwind)"
+        if sellers_pct >= 55:
+            bias_label_en = "GOLD (XAUUSD): STRONG SELL 🔴 (Flow & Yield 100% Aligned)"
+            bias_label_si = "GOLD (රත්රන්): දැඩි SELL පීඩනයක් 🔴 (Order Flow සහ Yield 100% එකඟයි)"
+        else:
+            bias_label_en = "GOLD (XAUUSD): STRONG MACRO SELL 🔴 (Yield Headwind Dominant)"
+            bias_label_si = "GOLD (රත්රන්): දැඩි MACRO SELL පීඩනයක් 🔴 (බැඳුම්කර ප්‍රතිලාභ පීඩනය)"
     elif total_score <= -12:
         master_bias = "SELL"
-        bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Distribution / Fade)"
-        bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (විකුණුම් පීඩනයක්)"
+        if sellers_pct >= 52:
+            bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Distribution / Fade)"
+            bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (විකුණුම් පීඩනයක්)"
+        else:
+            bias_label_en = "GOLD (XAUUSD): MODERATE SELL 🔴 (Yield Pressure Drift)"
+            bias_label_si = "GOLD (රත්රන්): සාමාන්‍ය SELL නැඹුරුවක් 🔴 (බැඳුම්කර ප්‍රතිලාභ බලපෑම)"
     else:
         master_bias = "NEUTRAL"
         bias_label_en = "GOLD (XAUUSD): NEUTRAL / RANGE 🟡 (Mixed Signals - Stay in Cash)"
@@ -193,7 +239,10 @@ Keep it practical, professional, without generic disclaimers.
             "title": shock_title_si if lang == "si" else shock_title_en,
             "action": shock_action_si if lang == "si" else shock_action_en,
             "color": shock_color
-        }
+        },
+        "is_divergent": is_divergent,
+        "divergence_warning": divergence_warning_si if lang == "si" else divergence_warning_en,
+        "divergence_action": divergence_action_si if lang == "si" else divergence_action_en,
     }
 
 

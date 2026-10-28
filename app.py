@@ -255,6 +255,11 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
         border: 1px solid #F59E0B;
     }
+    .warning-signal {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(180, 83, 9, 0.08) 100%);
+        border: 1.5px solid #F59E0B;
+        box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+    }
 
     /* News Badge */
     .news-badge {
@@ -558,6 +563,36 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 
     st.write("")
 
+    # 7.4. Master Strategic Bias & Executive Signal (Positioned ABOVE Flash Alert)
+    bias_style = "warning-signal" if ai_assessment.get("is_divergent") else ("buy-signal" if "BUY" in ai_assessment["master_bias"] else ("sell-signal" if "SELL" in ai_assessment["master_bias"] else "neutral-signal"))
+    master_sig_title = t('master_signal_title', lang_choice)
+    if master_sig_title == 'master_signal_title':
+        master_sig_title = "👑 ප්‍රධාන වෙළඳපොළ නැඹුරුව: GOLD (XAUUSD) INTRADAY" if lang_choice == "si" else "👑 MASTER STRATEGIC BIAS: GOLD (XAUUSD) INTRADAY"
+
+    div_box_html = ""
+    if ai_assessment.get("is_divergent"):
+        div_text = ai_assessment.get("divergence_warning", "")
+        div_action = ai_assessment.get("divergence_action", "")
+        div_box_html = (
+            f'<div style="background: rgba(245, 158, 11, 0.12); border-left: 4px solid #F59E0B; border-radius: 6px; padding: 10px 14px; margin-top: 10px;">'
+            f'<div style="font-size: 13.5px; font-weight: 800; color: #F59E0B;">⚠️ ආයතනික Divergence අනතුරු ඇඟවීම (Institutional Warning):</div>'
+            f'<div style="font-size: 13.5px; color: #E2E8F0; line-height: 1.45; margin-top: 3px;">{div_text}</div>'
+            f'<div style="font-size: 13px; font-weight: 700; color: #FCD34D; margin-top: 4px;">👉 ක්‍රියාමාර්ගය: {div_action}</div>'
+            f'</div>'
+        )
+
+    st.markdown(f'''<div class="signal-box {bias_style}" style="margin-bottom: 20px; border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div style="font-size: 14px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">{master_sig_title}</div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <span style="background: rgba(148, 163, 184, 0.15); color: #E2E8F0; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 5px;">🎯 {t("confidence_level", lang_choice)}: <b style="color:#F59E0B;">{ai_assessment["conviction"]}%</b></span>
+        <span style="background: rgba(148, 163, 184, 0.15); color: #E2E8F0; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 5px;">⚖️ Order Flow: <b style="color:#38BDF8;">{macro_data["buyers_pct"]}% Buyers vs {macro_data["sellers_pct"]}% Sellers</b></span>
+    </div>
+</div>
+<div style="font-size: 26px; font-weight: 900; margin: 10px 0 6px 0; color: #FFFFFF; line-height: 1.3;">{ai_assessment["bias_label"]}</div>
+{div_box_html}
+</div>''', unsafe_allow_html=True)
+
     # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
     m_state = geo_data.get("market_state")
     if not m_state or not isinstance(m_state, dict):
@@ -699,18 +734,6 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     left_col, right_col = st.columns([1.1, 0.9])
 
     with left_col:
-        # A. Master Strategic Bias & Regime
-        bias_style = "buy-signal" if "BUY" in ai_assessment["master_bias"] else ("sell-signal" if "SELL" in ai_assessment["master_bias"] else "neutral-signal")
-        master_sig_title = t('master_signal_title', lang_choice)
-        if master_sig_title == 'master_signal_title':
-            master_sig_title = "👑 ප්‍රධාන වෙළඳපොළ නැඹුරුව: GOLD (XAUUSD) INTRADAY" if lang_choice == "si" else "👑 MASTER STRATEGIC BIAS: GOLD (XAUUSD) INTRADAY"
-
-        st.markdown(f"""<div class="signal-box {bias_style}">
-<div style="font-size: 13px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">{master_sig_title}</div>
-<div style="font-size: 25px; font-weight: 900; margin: 8px 0; color: #FFFFFF; line-height: 1.3;">{ai_assessment['bias_label']}</div>
-<div style="font-size: 13px; color: #CBD5E1;"><b>{t('confidence_level', lang_choice)}:</b> {ai_assessment['conviction']}% | <b>Order Flow:</b> {macro_data['buyers_pct']}% Buyers vs {macro_data['sellers_pct']}% Sellers</div>
-</div>""", unsafe_allow_html=True)
-
         # B. Regime & Duration Predictor Card
         st.markdown(f"### {t('regime_title', lang_choice)}")
         rc1, rc2 = st.columns(2)
