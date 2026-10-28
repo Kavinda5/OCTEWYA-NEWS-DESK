@@ -563,7 +563,7 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 
     st.write("")
 
-    # 7.4. Master Strategic Bias & Executive Signal (Positioned ABOVE Flash Alert)
+    # 7.4. Master Strategic Bias & Executive Tactical HUD Ribbon (Positioned ABOVE Flash Alert)
     bias_style = "warning-signal" if ai_assessment.get("is_divergent") else ("buy-signal" if "BUY" in ai_assessment["master_bias"] else ("sell-signal" if "SELL" in ai_assessment["master_bias"] else "neutral-signal"))
     master_sig_title = t('master_signal_title', lang_choice)
     if master_sig_title == 'master_signal_title':
@@ -581,7 +581,74 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
             f'</div>'
         )
 
-    st.markdown(f'''<div class="signal-box {bias_style}" style="margin-bottom: 20px; border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+    # Tactical HUD metrics
+    vwap_val = macro_data.get("vwap", macro_data["gold_price"])
+    vwap_dist = macro_data.get("vwap_dist", 0.0)
+    vwap_color = "#10B981" if vwap_dist >= 0 else "#EF4444"
+    vwap_badge = "Above VWAP (Bullish)" if vwap_dist >= 0 else "Below VWAP (Bearish)"
+    of_event = macro_data.get("orderflow_event", "NORMAL_LIQUIDITY").replace("_", " ")
+
+    y10_val = macro_data.get("us10y_yield", 4.22)
+    y10_chg = macro_data.get("us10y_change", 0.0)
+    y_color = "#10B981" if y10_chg < -0.01 else ("#EF4444" if y10_chg > 0.01 else "#F59E0B")
+    y_desc = macro_data.get("yield_momentum_desc", "Neutral Yield Drift")
+
+    y2_val = macro_data.get("us02y_yield", 4.10)
+    y2_chg = macro_data.get("us02y_change", 0.0)
+    spread_val = macro_data.get("yield_spread", 0.10)
+    spread_color = "#10B981" if spread_val > 0 else "#EF4444"
+    spread_status = "Normal Curve (Steepening)" if spread_val > 0 else "Inverted Curve (Recession Watch)"
+    y2_color = "#10B981" if y2_chg < -0.01 else ("#EF4444" if y2_chg > 0.01 else "#F59E0B")
+
+    shock = ai_assessment.get("shock_warning", {})
+    shock_status = shock.get("status", "CLEAR")
+    shock_title = shock.get("title", "🛡️ EVENT HORIZON: STABLE")
+    shock_action = shock.get("action", "Market drivers are orderly.")
+    shock_color = shock.get("color", "#3B82F6")
+
+    shock_ribbon_html = ""
+    if shock_status != "CLEAR":
+        shock_ribbon_html = (
+            f'<div style="background: rgba(0,0,0,0.4); border: 1.5px solid {shock_color}; border-radius: 8px; padding: 10px 14px; margin-top: 10px;">'
+            f'<div style="color: {shock_color}; font-weight: 800; font-size: 13.5px;">{shock_title}</div>'
+            f'<div style="color: #F8FAFC; font-size: 13px; font-weight: 600; margin-top: 3px;">👉 {shock_action}</div>'
+            f'</div>'
+        )
+
+    hud_ribbon_html = (
+        f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 12px; background: rgba(0, 0, 0, 0.45); padding: 12px 14px; border-radius: 8px; border: 1px solid #334155;">'
+        # 1. Regime & ATR
+        f'<div style="border-right: 1px solid rgba(255,255,255,0.08); padding-right: 8px;">'
+        f'<div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">🧭 {t("regime_title", lang_choice)}</div>'
+        f'<div style="font-size: 15px; font-weight: 800; color: #F59E0B; margin-top: 2px;">{t("regime_" + macro_data["regime"].lower(), lang_choice)}</div>'
+        f'<div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;">⏱️ {macro_data["estimated_duration"]} &bull; <b style="color:#10B981;">{macro_data["breakout_risk_pct"]}% Breakout</b></div>'
+        f'<div style="font-size: 11.5px; color: #94A3B8;">ATR (M15): ±${macro_data["gold_atr"]:.2f} pips</div>'
+        f'</div>'
+        # 2. VWAP & Flow
+        f'<div style="border-right: 1px solid rgba(255,255,255,0.08); padding-right: 8px;">'
+        f'<div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">🌊 INTRADAY VWAP & LIQUIDITY</div>'
+        f'<div style="font-size: 15px; font-weight: 800; color: {vwap_color}; margin-top: 2px;">${vwap_val:.2f} <span style="font-size: 11.5px; font-weight:700;">({vwap_badge})</span></div>'
+        f'<div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;">Dist: <b style="color:{vwap_color};">{vwap_dist:+.1f} pips</b></div>'
+        f'<div style="font-size: 11.5px; color: #94A3B8;">Event: {of_event}</div>'
+        f'</div>'
+        # 3. US 10Y Yield
+        f'<div style="border-right: 1px solid rgba(255,255,255,0.08); padding-right: 8px;">'
+        f'<div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">🏛️ US10Y YIELD MOMENTUM</div>'
+        f'<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 2px;">{y10_val:.3f}% <span style="font-size: 12px; color:{y_color}; font-weight:700;">({y10_chg:+.3f}%)</span></div>'
+        f'<div style="font-size: 12px; color: {y_color}; font-weight: 700; margin-top: 2px;">{y_desc}</div>'
+        f'<div style="font-size: 11.5px; color: #94A3B8;">2Y/10Y Spread: {macro_data["yield_spread"]:+.2f}%</div>'
+        f'</div>'
+        # 4. 2Y/10Y Spread & Fed Proxy
+        f'<div>'
+        f'<div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">⚡ 2Y/10Y SPREAD & FED PROXY</div>'
+        f'<div style="font-size: 15px; font-weight: 800; color: {spread_color}; margin-top: 2px;">{spread_val:+.3f}% <span style="font-size: 11.5px; color:#94A3B8;">(10Y - 2Y)</span></div>'
+        f'<div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;"><b>US 02Y:</b> {y2_val:.3f}% <span style="color:{y2_color}; font-weight:700;">({y2_chg:+.3f} pts)</span></div>'
+        f'<div style="font-size: 11.5px; color: #94A3B8;">{spread_status}</div>'
+        f'</div>'
+        f'</div>'
+    )
+
+    st.markdown(f'''<div class="signal-box {bias_style}" style="margin-bottom: 22px; border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div style="font-size: 14px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">{master_sig_title}</div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -591,9 +658,11 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 </div>
 <div style="font-size: 26px; font-weight: 900; margin: 10px 0 6px 0; color: #FFFFFF; line-height: 1.3;">{ai_assessment["bias_label"]}</div>
 {div_box_html}
+{shock_ribbon_html}
+{hud_ribbon_html}
 </div>''', unsafe_allow_html=True)
 
-    # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
+    # 7.5. Dedicated Hero Section    # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
     m_state = geo_data.get("market_state")
     if not m_state or not isinstance(m_state, dict):
         m_state = {
@@ -734,105 +803,6 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     left_col, right_col = st.columns([1.1, 0.9])
 
     with left_col:
-        # B. Regime & Duration Predictor Card
-        st.markdown(f"### {t('regime_title', lang_choice)}")
-        rc1, rc2 = st.columns(2)
-        with rc1:
-            st.markdown(f"""<div class="ticker-card" style="text-align: left;">
-<div class="ticker-label">{t('regime_title', lang_choice)}</div>
-<div style="font-size: 16px; font-weight: 700; color: #F59E0B;">{t('regime_' + macro_data['regime'].lower(), lang_choice)}</div>
-<div style="font-size: 14px; color: #94A3B8; margin-top: 4px;"><b>{t('expected_duration', lang_choice)}:</b> {macro_data['estimated_duration']}</div>
-</div>""", unsafe_allow_html=True)
-
-        with rc2:
-            st.markdown(f"""<div class="ticker-card" style="text-align: left;">
-<div class="ticker-label">{t('breakout_risk', lang_choice)}</div>
-<div style="font-size: 16px; font-weight: 700; color: #10B981;">{macro_data['breakout_risk_pct']}% Probability</div>
-<div style="font-size: 14px; color: #94A3B8; margin-top: 4px;"><b>ATR (M15 Volatility):</b> ±${macro_data['gold_atr']:.2f} pips</div>
-</div>""", unsafe_allow_html=True)
-
-        st.write("")
-
-        # C. Real-Time Gold Action & Shock Radar (Replaces static yields gauge)
-        shock = ai_assessment.get("shock_warning", {})
-        shock_status = shock.get("status", "CLEAR")
-        shock_title = shock.get("title", "🛡️ EVENT HORIZON: STABLE")
-        shock_action = shock.get("action", "Market drivers are orderly.")
-        shock_color = shock.get("color", "#3B82F6")
-
-        radar_title = "⚡ සජීවී වෙළඳපොළ දිශාව සහ පුවත් අවදානම් රේඩාර්" if lang_choice == "si" else "⚡ Real-Time Gold Action & Shock Radar"
-        st.markdown(f"### {radar_title}")
-
-        # 1. Event Shock Reversal Warning Box
-        if shock_status != "CLEAR":
-            shock_box_html = (
-                f'<div style="background: rgba(0,0,0,0.4); border: 2px solid {shock_color}; border-radius: 10px; padding: 14px 18px; margin-bottom: 15px;">'
-                f'<div style="color: {shock_color}; font-weight: 900; font-size: 15px;">{shock_title}</div>'
-                f'<div style="color: #F8FAFC; font-size: 13px; font-weight: 600; margin-top: 5px;">👉 {shock_action}</div>'
-                f'</div>'
-            )
-        else:
-            shock_box_html = (
-                f'<div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 15px;">'
-                f'<div style="color: #10B981; font-weight: 800; font-size: 14px;">{shock_title}</div>'
-                f'<div style="color: #94A3B8; font-size: 14px; margin-top: 3px;">{shock_action}</div>'
-                f'</div>'
-            )
-        st.markdown(shock_box_html, unsafe_allow_html=True)
-
-        # 2. 3 Tactical Drivers Cards (Order Flow, Yield Momentum, Oil Spike Watch)
-        k1, k2, k3 = st.columns(3)
-        with k1:
-            vwap_val = macro_data.get("vwap", macro_data["gold_price"])
-            vwap_dist = macro_data.get("vwap_dist", 0.0)
-            vwap_color = "#10B981" if vwap_dist >= 0 else "#EF4444"
-            vwap_badge = "Above VWAP (Bullish)" if vwap_dist >= 0 else "Below VWAP (Bearish)"
-            of_event = macro_data.get("orderflow_event", "NORMAL_LIQUIDITY").replace("_", " ")
-
-            st.markdown(
-                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
-                f'<div class="ticker-label">🌊 INTRADAY VWAP & LIQUIDITY</div>'
-                f'<div style="font-size: 15px; font-weight: 800; color: {vwap_color}; margin-top: 4px;">${vwap_val:.2f}</div>'
-                f'<div style="font-size: 13.5px; color: #CBD5E1; margin-top: 2px;"><b>Pos:</b> <span style="color:{vwap_color};">{vwap_badge}</span></div>'
-                f'<div style="font-size: 13.5px; color: #94A3B8; margin-top: 2px;"><b>Event:</b> {of_event}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-        with k2:
-            y10_val = macro_data["us10y_yield"]
-            y10_chg = macro_data["us10y_change"]
-            y_color = "#10B981" if y10_chg < -0.01 else ("#EF4444" if y10_chg > 0.01 else "#F59E0B")
-            y_desc = macro_data.get("yield_momentum_desc", "Neutral Yield Drift")
-
-            st.markdown(
-                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
-                f'<div class="ticker-label">🏛️ US10Y YIELD MOMENTUM</div>'
-                f'<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">{y10_val:.3f}% <span style="font-size: 14px; color:{y_color};">({y10_chg:+.3f}%)</span></div>'
-                f'<div style="font-size: 13.5px; color: {y_color}; font-weight: 700; margin-top: 2px;">{y_desc}</div>'
-                f'<div style="font-size: 13.5px; color: #94A3B8; margin-top: 2px;">2Y/10Y Spread: {macro_data["yield_spread"]:+.2f}%</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-        with k3:
-            y2_val = macro_data.get("us02y_yield", 4.10)
-            y2_chg = macro_data.get("us02y_change", 0.0)
-            spread_val = macro_data.get("yield_spread", 0.10)
-            spread_color = "#10B981" if spread_val > 0 else "#EF4444"
-            spread_status = "Normal Curve (Steepening)" if spread_val > 0 else "Inverted Curve (Recession Watch)"
-            y2_color = "#10B981" if y2_chg < -0.01 else ("#EF4444" if y2_chg > 0.01 else "#F59E0B")
-
-            st.markdown(
-                f'<div class="ticker-card" style="text-align: left; padding: 12px 14px;">'
-                f'<div class="ticker-label">⚡ 2Y/10Y SPREAD & FED PROXY</div>'
-                f'<div style="font-size: 15px; font-weight: 800; color: {spread_color}; margin-top: 4px;">{spread_val:+.3f}% <span style="font-size: 13.5px; color:#94A3B8;">(10Y - 2Y)</span></div>'
-                f'<div style="font-size: 13.5px; color: #CBD5E1; margin-top: 2px;"><b>US 02Y:</b> {y2_val:.3f}% <span style="color:{y2_color}; font-weight:700;">({y2_chg:+.3f} pts)</span></div>'
-                f'<div style="font-size: 13.5px; color: #94A3B8; margin-top: 2px;">{spread_status}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
         # D. Historical Reaction Precedent & Causality
         st.markdown(f"### {t('history_title', lang_choice)}")
         st.markdown(f"*{t('history_explanation', lang_choice)}*")
