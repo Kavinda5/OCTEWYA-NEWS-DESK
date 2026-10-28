@@ -272,7 +272,9 @@ def calculate_multi_day_orderflow_forecast(macro_data: dict, geo_data: dict = No
     - Order Flow Liquidity (Sell-Side Liquidity SSL vs Buy-Side Liquidity BSL)
     - Yields (US10Y & DXY pressure)
     - Geopolitics & Crude Oil Spike Safe-Haven demand
-    Returns probability percentages, specific price targets, rationale and invalidation.
+    - Dynamic Session Detection (Weekday vs Weekend, Day London/NY vs Night NY/Asia)
+    - Two-Stage Reversal & Exhaustion Pivot (Current Session Leg -> Next Session Reversal)
+    Returns probability percentages, specific price targets, reversal pivots, rationale and invalidation.
     """
     gold_price = float(macro_data.get("gold_price", 4007.9))
     atr = float(macro_data.get("gold_atr", 13.3))
@@ -292,9 +294,9 @@ def calculate_multi_day_orderflow_forecast(macro_data: dict, geo_data: dict = No
     df = macro_data.get("gold_history")
     
     # 1. Calculate Volume Profile from history
-    poc_price = 4140.9
-    val_price = 4007.2
-    vah_price = 4170.4
+    poc_price = 4030.8
+    val_price = 4006.5
+    vah_price = 4056.8
     recent_low = 3989.1
     recent_high = 4211.2
     
@@ -333,10 +335,8 @@ def calculate_multi_day_orderflow_forecast(macro_data: dict, geo_data: dict = No
             vah_price = round(float(bins[max(va_ind) + 1]), 1)
 
     # 2. Dynamic Probability Model
-    # Baseline: 50% Sell, 50% Buy
     sell_score = 50.0
     
-    # Yields pressure (Higher yields = Bearish gold)
     if us10y >= 4.95:
         sell_score += 8.0
     elif us10y <= 4.80:
@@ -346,50 +346,111 @@ def calculate_multi_day_orderflow_forecast(macro_data: dict, geo_data: dict = No
     elif us10y_chg < -0.015:
         sell_score -= 4.0
         
-    # DXY pressure
     if dxy >= 101.50:
         sell_score += 4.0
     elif dxy <= 100.80:
         sell_score -= 4.0
         
-    # Order flow DOM
     if sellers_pct >= 60:
         sell_score += 5.0
     elif buyers_pct >= 60:
         sell_score -= 5.0
         
-    # VWAP auction position (Below VWAP = Bearish until reclaimed)
     if gold_price < vwap:
         sell_score += 4.0
     else:
         sell_score -= 4.0
         
-    # Safe haven & crude oil hedge (buffers against sell pressure)
     if oil_spike:
         sell_score -= 9.0
     if geo_score >= 60:
         sell_score -= 8.0
         
-    # Clamp probabilities to realistic bounds [24%, 76%]
     sell_prob = max(min(int(round(sell_score)), 76), 24)
     buy_prob = 100 - sell_prob
     
-    # 3. Dynamic target levels
+    # 3. Dynamic Session Detection (SL Time UTC+5:30)
+    now_utc = datetime.now(timezone.utc)
+    sl_dt = now_utc + timedelta(hours=5, minutes=30)
+    weekday = sl_dt.weekday() # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+    hour_sl = sl_dt.hour
+    
+    if weekday in (5, 6): # Weekend
+        session_label_si = "NEXT MONDAY"
+        session_label_en = "NEXT MONDAY"
+        session_phase_name_si = "සඳුදා වෙළඳපොළ ආරම්භක මාර්ග සිතියම"
+        session_phase_name_en = "Monday Weekly Opening Roadmap"
+        curr_session_desc_si = "සඳුදා වෙළඳපොළ ආරම්භක පිපිරීම (Monday Open Push)"
+        next_session_desc_si = "සඳුදා NY සැසියේ Reversal / Mean Reversion"
+    elif 6 <= hour_sl < 18: # Daytime (London / early NY)
+        day_names_si = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"]
+        day_names_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        curr_day_si = day_names_si[weekday] if weekday < 5 else "අද"
+        curr_day_en = day_names_en[weekday] if weekday < 5 else "Today"
+        session_label_si = f"{curr_day_si} LONDON / NY"
+        session_label_en = f"{curr_day_en.upper()} LONDON / NY"
+        session_phase_name_si = f"අද ({curr_day_si}) London & NY සැසි මාර්ග සිතියම"
+        session_phase_name_en = f"Today's ({curr_day_en}) London & NY Session Roadmap"
+        curr_session_desc_si = f"අද ({curr_day_si}) London & NY සක්‍රිය තල්ලුව (Active Push)"
+        next_session_desc_si = "අද රාත්‍රී / හෙට උදෑසන Asian සැසියේ Reversal Pivot"
+    else: # Night time (Active NY into overnight)
+        session_label_si = "OVERNIGHT & TOMORROW"
+        session_label_en = "OVERNIGHT & TOMORROW"
+        session_phase_name_si = "රාත්‍රී නිව්යෝර්ක් සැසිය සහ හෙට උදෑසන හැරවුම් මට්ටම්"
+        session_phase_name_en = "Overnight & Tomorrow Morning Pivot Roadmap"
+        curr_session_desc_si = "රාත්‍රී NY සැසියේ ඉලක්කගත අවසානය (NY Session Exhaustion Leg)"
+        next_session_desc_si = "හෙට උදෑසන Asian / London සැසියේ Reversal එක"
+
+    # 4. Target Levels
     b_t1_low = round(recent_low, 1)
     b_t1_high = round(recent_low + 4.0, 1)
     b_t2_low = round(b_t1_low - (atr * 2.5), 1)
     b_t2_high = round(b_t2_low + 7.0, 1)
     
-    bull_t1_low = round(vwap + (atr * 1.1), 1)
+    bull_t1_low = round(max(vah_price, vwap + (atr * 0.8)), 1)
     bull_t1_high = round(bull_t1_low + 7.0, 1)
-    bull_t2 = poc_price
+    bull_t2 = round(max(recent_high, bull_t1_high + 25.0), 1)
     
-    # Invalidation thresholds
     invalidation_bearish = round(vwap + 2.5, 1)
     invalidation_bullish = round(recent_low - 4.0, 1)
     
     primary_dir = "SELL" if sell_prob > buy_prob else ("BUY" if buy_prob > sell_prob else "NEUTRAL")
-    
+
+    # 5. Two-Stage Reversal & Exhaustion Pivot Logic
+    if primary_dir == "BUY":
+        pivot_level = f"${bull_t1_low:.1f} - ${bull_t1_high:.1f}"
+        pivot_type = "BEARISH_REVERSAL"
+        pivot_action_si = "Buyers Exhaustion & BSL Stop Hunt (ඉහළින් ගැණුම්කරුවන් වෙහෙසට පත්වී ආයතන Profit Taking කිරීම)"
+        pivot_action_en = "Buyers Exhaustion & Buy-Side Liquidity Sweep"
+        pivot_target = f"${poc_price:.1f} (Volume POC) හෝ ${val_price:.1f} (VAL)"
+        pivot_prob = 72
+        pivot_note_si = (
+            f"මිල {bull_t1_low:.1f} - {bull_t1_high:.1f} (VAH / BSL) මට්ටමට ළඟා වූ පසු ආයතනික ලාභ ලබාගැනීම් (Profit Taking) "
+            f"සිදුවනු ඇත. එබැවින් එතැනින් පසු අන්ධව Buy නොවී, {next_session_desc_si}දී නැවත {poc_price:.1f} (VPOC) දක්වා "
+            f"හැරෙන Sell Reversal එකක් (72% සම්භාවිතාව) අපේක්ෂා කරන්න."
+        )
+        pivot_note_en = (
+            f"Once price taps {bull_t1_low:.1f} - {bull_t1_high:.1f} (VAH/BSL), expect institutional profit taking. "
+            f"Avoid chasing longs at highs; anticipate a 72% probability mean reversion selloff back toward {poc_price:.1f} (VPOC) "
+            f"during the {next_session_desc_si}."
+        )
+    else:
+        pivot_level = f"${b_t1_low:.1f} - ${b_t1_high:.1f}"
+        pivot_type = "BULLISH_REVERSAL"
+        pivot_action_si = "Sellers Absorption & SSL Liquidity Sweep (පහළින් විකුණුම්කරුවන්ගේ පීඩනය අවසන් වී ආයතන Short Covering කිරීම)"
+        pivot_action_en = "Sellers Absorption & Sell-Side Liquidity Sweep"
+        pivot_target = f"${poc_price:.1f} (Volume POC) හෝ ${vwap:.1f} (VWAP)"
+        pivot_prob = 70
+        pivot_note_si = (
+            f"මිල {b_t1_low:.1f} - {b_t1_high:.1f} (SSL / News Low) මට්ටමට වැටී Stop Loss අතුගා දැමූ පසු (Liquidity Sweep), "
+            f"{next_session_desc_si}දී ආයතනික Short Covering හේතුවෙන් නැවත {poc_price:.1f} (VPOC) / VWAP දක්වා "
+            f"ඉහළට හැරෙන Relief Buy Reversal එකක් (70% සම්භාවිතාව) අපේක්ෂා කරන්න."
+        )
+        pivot_note_en = (
+            f"After price sweeps the {b_t1_low:.1f} - {b_t1_high:.1f} Sell-Side Liquidity shelf, expect seller absorption. "
+            f"Watch for a 70% probability relief buy reversal back toward {poc_price:.1f} (VPOC) during the {next_session_desc_si}."
+        )
+
     result = {
         "primary_dir": primary_dir,
         "buy_prob": buy_prob,
@@ -399,23 +460,34 @@ def calculate_multi_day_orderflow_forecast(macro_data: dict, geo_data: dict = No
         "val": val_price,
         "vah": vah_price,
         "poc": poc_price,
+        "session_label_si": session_label_si,
+        "session_label_en": session_label_en,
+        "session_phase_name_si": session_phase_name_si,
+        "session_phase_name_en": session_phase_name_en,
+        "curr_session_desc_si": curr_session_desc_si,
+        "next_session_desc_si": next_session_desc_si,
         "bearish_t1": f"${b_t1_low:.1f} - ${b_t1_high:.1f}",
         "bearish_t2": f"${b_t2_low:.1f} - ${b_t2_high:.1f}",
         "bullish_t1": f"${bull_t1_low:.1f} - ${bull_t1_high:.1f}",
         "bullish_t2": f"${bull_t2:.1f}",
         "invalidation_bearish": f"${invalidation_bearish:.1f}",
         "invalidation_bullish": f"${invalidation_bullish:.1f}",
+        "pivot_level": pivot_level,
+        "pivot_type": pivot_type,
+        "pivot_action_si": pivot_action_si,
+        "pivot_action_en": pivot_action_en,
+        "pivot_target": pivot_target,
+        "pivot_prob": pivot_prob,
+        "pivot_note_si": pivot_note_si,
+        "pivot_note_en": pivot_note_en,
         "reason_si": (
-            f"US 10Y Yield ({us10y:.2f}%) 5.0% මට්ටමට ආසන්නව පැවතීම සහ මිල Weekly VWAP (${vwap:.1f}) ට පහළින් "
-            f"පැවතීම නිසා Sell පීඩනය {sell_prob}% ක වැඩි සම්භාවිතාවක් ගනී. එහෙත් Crude Oil (${oil_price:.1f}) "
-            f"ඉහළ යාම සහ Weekly Value Area Low (${val_price:.1f}) ආධාරකය මිල එකවර කඩා වැටීම වළක්වමින් "
-            f"Compression (78% Breakout Potential) තත්ත්වයක් පවත්වා ගනී."
+            f"US 10Y Yield ({us10y:.2f}%) සහ DXY ({dxy:.2f}) මට්ටම් සමඟ සසඳන විට, "
+            f"Crude Oil (${oil_price:.1f}) spike සහ Volume Profile ({val_price} - {vah_price}) කලාපය මත "
+            f"පදනම්ව වත්මන් සැසියේ {primary_dir} දිශාවට {max(buy_prob, sell_prob)}% ක වැඩි බරක් ලැබී ඇත."
         ),
         "reason_en": (
-            f"Elevated US 10Y Yields ({us10y:.2f}%) testing 5.0% and sub-VWAP (${vwap:.1f}) auction give "
-            f"Sellers the edge ({sell_prob}%). However, Crude Oil spike (${oil_price:.1f}) and "
-            f"Value Area Low support (${val_price:.1f}) prevent freefall, coiling the market for a high-probability breakout."
+            f"Evaluating US 10Y Yields ({us10y:.2f}%) and DXY ({dxy:.2f}) against Crude Oil (${oil_price:.1f}) and "
+            f"Volume Profile bounds ({val_price} - {vah_price}), active flow favors {primary_dir} with {max(buy_prob, sell_prob)}% probability."
         )
     }
     return result
-
