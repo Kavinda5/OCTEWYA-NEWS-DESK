@@ -29,7 +29,7 @@ def fetch_dynamic_calendar(current_macro: dict, ttl_seconds: int = 120) -> list:
         now_dt = datetime.now(timezone.utc)
         from_str = (now_dt - timedelta(hours=48)).strftime("%Y-%m-%dT%H:00:00.000Z")
         to_str = (now_dt + timedelta(days=7)).strftime("%Y-%m-%dT23:59:59.000Z")
-        tv_url = f"https://economic-calendar.tradingview.com/events?from={from_str}&to={to_str}&countries=US"
+        tv_url = f"https://economic-calendar.tradingview.com/events?from={from_str}&to={to_str}&countries=US,CA,EU,GB,JP"
         tv_headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Origin": "https://www.tradingview.com"
@@ -39,8 +39,12 @@ def fetch_dynamic_calendar(current_macro: dict, ttl_seconds: int = 120) -> list:
             tv_data = resp.json().get("result", [])
             tier1_tier2 = [e for e in tv_data if e.get("importance", -1) >= 0]
             
-            for item in tier1_tier2[:40]:
-                title = item.get("title", "US Economic Event")
+            COUNTRY_FLAGS = {"US": "🇺🇸", "CA": "🇨🇦", "EU": "🇪🇺", "GB": "🇬🇧", "JP": "🇯🇵"}
+            for item in tier1_tier2[:100]:
+                c_code = item.get("country", "US")
+                c_flag = COUNTRY_FLAGS.get(c_code, "🌐")
+                raw_title = item.get("title", "Economic Event")
+                title = f"{c_flag} [{c_code}] {raw_title}" if c_code != "US" else raw_title
                 imp_val = item.get("importance", 0)
                 impact = "HIGH" if imp_val == 1 else "MEDIUM"
                 date_str = item.get("date", "")
@@ -117,6 +121,8 @@ def fetch_dynamic_calendar(current_macro: dict, ttl_seconds: int = 120) -> list:
 
                 events.append({
                     "title": title,
+                    "country": c_code,
+                    "raw_title": raw_title,
                     "impact": impact,
                     "date": formatted_date,
                     "iso_date": date_str,
@@ -431,7 +437,7 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             else:
                 if item_data.get("actual") not in ["-", "", None]:
                     past_released.append(item_data)
-                if -3600 <= diff_sec <= 0:
+                if -1200 <= diff_sec <= 0:
                     item_data["mins_ago"] = max(int(abs(diff_sec) / 60), 1)
                     recent_released.append(item_data)
         except Exception:
@@ -530,8 +536,8 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             cluster_desc_en = f"Full Macro Cluster Alignment: All {len(cluster)} releases printed USD Bearish / Labor Cooling! Strong sustained surge on Gold."
             cluster_desc_si = f"පූර්ණ එකඟතාව: පුවත් {len(cluster)}ම USD දුර්වල කළා! Gold ඉහළටම (Buy) ගමන් කරයි."
         else:
-            impact_lbl_en = "🟡 CLUSTER OUTCOME: BALANCED / CHOP REGIME 🟡"
-            impact_lbl_si = "🟡 ප්‍රතිඵලය: සමතුලිත දත්ත / දෙපැත්තටම දෝලනය 🟡"
+            impact_lbl_en = "🎯 BALANCED MACRO OUTCOME (RANGE PRESERVED)"
+            impact_lbl_si = "🎯 සමතුලිත දත්ත (තාක්ෂණික පරාසය සුරැකිව පවතී)"
             badge_clr = "#F59E0B"
             cluster_desc_en = "In-line data. Standard technical range trading."
             cluster_desc_si = "දත්ත අපේක්ෂිත මට්ටමේය. සාමාන්‍ය Technical පරාසය තුළ වෙළඳාම් කරන්න."
@@ -605,11 +611,39 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             advice_en = f"Macro Cluster of {len(cluster)} releases leaning Dovish. Dominant Anchor: {dominant_event['title']} (Weight: {dominant_event['weight']}/10). Awaiting release deviation."
             advice_si = f"පුවත් {len(cluster)}ක පොකුරක්. ප්‍රමුඛ දත්තය: {dominant_event['title']} (බර: {dominant_event['weight']}/10). Buy නැඹුරුවක් ඇති නමුත් නිල දත්ත එනතුරු රැඳී සිටින්න."
         else:
-            impact_en = f"🟡 PRE-NEWS CLUSTER: TWO-WAY VOLATILITY ({len(cluster)} RELEASES) 🟡"
-            impact_si = f"🟡 පූර්ව අපේක්ෂාව: දෙපැත්තටම අවදානම් ({len(cluster)} පුවත්) 🟡"
-            badge_color = "#F59E0B"
-            advice_en = f"Mixed pre-conditions across {len(cluster)} releases. Dominant Anchor: {dominant_event['title']}."
-            advice_si = f"පුවත් {len(cluster)}ක් අතර පරස්පර අපේක්ෂාවන්. ප්‍රමුඛ දත්තය: {dominant_event['title']}."
+            impact_en = f"🎯 UPCOMING MACRO CATALYST: {dominant_event['title']}"
+            impact_si = f"🎯 ඉදිරි ප්‍රධාන සිදුවීම: {dominant_event['title']}"
+            badge_color = "#38BDF8"
+            advice_en = f"High-Impact catalyst detected. Directional execution is managed by the VIP News Sniper Desk above."
+            advice_si = f"ඉදිරියට ඇති ප්‍රධාන පුවත. මෙහි සම්පූර්ණ Sniper සැලසුම ඉහළ VIP Card එකෙන් කළමනාකරණය වේ."
+
+        # G7 Cross-Currency Spillover Detection (CAD, EUR, GBP, JPY)
+        g7_events = [e for e in upcoming if e.get("country") in ["CA", "EU", "GB", "JP"]]
+        g7_spillover = None
+        if g7_events:
+            g7_ev = g7_events[0]
+            c_code = g7_ev.get("country", "")
+            dxy_map = {
+                "CA": ("🇨🇦 Canada", "CAD", "USD/CAD", "9.1% of DXY"),
+                "EU": ("🇪🇺 Eurozone", "EUR", "EUR/USD", "57.6% of DXY"),
+                "GB": ("🇬🇧 UK", "GBP", "GBP/USD", "11.9% of DXY"),
+                "JP": ("🇯🇵 Japan", "JPY", "USD/JPY", "13.6% of DXY")
+            }
+            if c_code in dxy_map:
+                c_name, curr, pair, dxy_weight = dxy_map[c_code]
+                g7_spillover = {
+                    "has_spillover": True,
+                    "title": g7_ev.get("title", ""),
+                    "country": c_code,
+                    "country_name": c_name,
+                    "pair": pair,
+                    "dxy_weight": dxy_weight,
+                    "time_str": g7_ev.get("sl_full_time", ""),
+                    "transmission_si": f"{c_name} හි {g7_ev.get('title')} නිකුත් වීමත් සමඟ {pair} ({dxy_weight}) යුගලය වේගයෙන් චලනය වන අතර, එය DXY හරහා Gold වෙත සෘජුවම තරංගයක් ලෙස සම්ප්‍රේෂණය වේ.",
+                    "transmission_en": f"{c_name} {g7_ev.get('title')} release directly drives {pair} ({dxy_weight}), transmitting an immediate spillover wave into Gold via DXY.",
+                    "reaction_si": f"• {curr} ශක්තිමත් වුවහොත් ➔ DXY පහළ වැටේ ➔ 🟢 Gold Dip-Buy Push (+35 Pips)<br>• {curr} දුර්වල වුවහොත් ➔ DXY ඉහළ යයි ➔ 🔴 Gold Scalp Pullback (-25 Pips)",
+                    "reaction_en": f"• {curr} Strong ➔ DXY Drops ➔ 🟢 Gold Dip-Buy Push (+35 Pips)<br>• {curr} Weak ➔ DXY Rallies ➔ 🔴 Gold Pullback (-25 Pips)"
+                }
 
         cluster_title_str = f"Macro Cluster ({len(cluster)} Releases) • Anchor: {dominant_event['title']}"
 
@@ -632,6 +666,7 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             "dominant_event": dominant_event.get("title", ""),
             "dominant_weight": dominant_event.get("weight", 5),
             "cluster_events": cluster,
+            "g7_spillover": g7_spillover,
             "last_event_scorecard": last_event_scorecard
         }
 
@@ -658,3 +693,116 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
         "cluster_events": [],
         "last_event_scorecard": last_event_scorecard
     }
+
+
+def render_macro_catalyst_radar_html(macro_watch: dict, lang_choice: str = "si") -> str:
+    """
+    Renders the unified G7 Cross-Currency Spillover & Macro Catalyst Radar
+    for the Hero Section Right Column. Eliminates contradictory two-way labels
+    and seamlessly aligns with the VIP News Sniper Desk.
+    """
+    is_si = (lang_choice == "si")
+    header_title = "🎯 ආර්ථික උත්ප්‍රේරක සහ G7 තරංග රේඩාර්" if is_si else "🎯 MACRO CATALYST & G7 SPILLOVER RADAR"
+    
+    watch_status = macro_watch.get("status", "UPCOMING")
+    title = macro_watch.get("title", "High-Impact Economic Release")
+    dominant_event = macro_watch.get("dominant_event", title)
+    time_str = macro_watch.get("time_str", "")
+    countdown_str = macro_watch.get("countdown_str", "Active")
+    dominant_weight = macro_watch.get("dominant_weight", 6)
+    
+    g7 = macro_watch.get("g7_spillover")
+    scorecard = macro_watch.get("last_event_scorecard")
+    
+    # 1. G7 Spillover Card or Pure US Anchor Card
+    if g7 and g7.get("has_spillover"):
+        pair_str = g7.get("pair", "USD/CAD")
+        dxy_w = g7.get("dxy_weight", "9.1% of DXY")
+        c_name = g7.get("country_name", "G7 Currency")
+        ev_title = g7.get("title", "")
+        trans_text = g7.get("transmission_si" if is_si else "transmission_en", "")
+        react_text = g7.get("reaction_si" if is_si else "reaction_en", "")
+        
+        middle_card_html = f"""
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0; box-shadow: 0 0 16px rgba(14,165,233,0.18);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">
+                    🌐 {"G7 විදේශ විනිමය තරංග රේඩාර්" if is_si else "G7 CROSS-CURRENCY SPILLOVER"}
+                </span>
+                <span style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">
+                    {pair_str} • {dxy_w}
+                </span>
+            </div>
+            <div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; line-height: 1.35;">
+                {c_name}: {ev_title}
+            </div>
+            <div style="font-size: 12px; color: #94A3B8; margin-top: 5px; line-height: 1.45;">
+                {trans_text}
+            </div>
+            <div style="margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.4); border-radius: 6px; font-size: 12px; line-height: 1.5; color: #E2E8F0; border-left: 3px solid #38BDF8;">
+                {react_text}
+            </div>
+        </div>
+        """
+    else:
+        middle_card_html = f"""
+        <div style="background: rgba(14, 165, 233, 0.08); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <span style="font-size: 12.5px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">
+                    🎯 {"ආයතනික දත්ත උත්ප්‍රේරකය" if is_si else "INSTITUTIONAL CATALYST ANCHOR"}
+                </span>
+                <span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">
+                    Dominance: {dominant_weight}/10
+                </span>
+            </div>
+            <div style="font-size: 12.5px; color: #E2E8F0; line-height: 1.45; margin-top: 4px;">
+                {"මෙම ආර්ථික දත්තය සඳහා වන සම්පූර්ණ Directional Pre-News Sniper සැලසුම (Entry / Tight SL / Judas Trap Shield) ඉහළ VIP Desk එකෙන් ක්‍රියාත්මක වේ." if is_si else "Directional pre-news execution (Entry / Tight SL / Judas Shield) is actively managed by the VIP News Sniper Desk above."}
+            </div>
+        </div>
+        """
+
+    # 2. Scorecard HTML
+    scorecard_html = ""
+    if scorecard:
+        acc_label = scorecard.get("accuracy_label_si" if is_si else "accuracy_label_en", "")
+        acc_clr = scorecard.get("accuracy_color", "#10B981")
+        mov_state = scorecard.get("movement_state_si" if is_si else "movement_state_en", "")
+        mov_desc = scorecard.get("movement_desc_si" if is_si else "movement_desc_en", "")
+        mov_clr = scorecard.get("movement_color", "#10B981")
+        imb_note = scorecard.get("imbalance_note_si" if is_si else "imbalance_note_en", "")
+        imb_badge = scorecard.get("imbalance_badge", "")
+        sc_title = "🎯 පසුගිය ප්‍රවෘත්ති ප්‍රතිඵලය සහ ගමන්මග" if is_si else "🎯 LAST EVENT OUTCOME & AFTER-MOVEMENT"
+        
+        scorecard_html = f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #283347; border-radius: 8px; padding: 12px 14px; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">{sc_title}</span>
+                <span style="background: {acc_clr}22; color: {acc_clr}; border: 1px solid {acc_clr}; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{acc_label}</span>
+            </div>
+            <div style="font-size: 13.5px; color: #E2E8F0; font-weight: 700;">📌 {scorecard.get("title")}</div>
+            <div style="font-size: 12px; color: #64748B; margin-top: 2px;">🕒 {scorecard.get("released_time")}</div>
+            <div style="margin-top: 7px; padding: 7px 9px; background: rgba(0,0,0,0.3); border-radius: 6px; border-left: 3px solid {mov_clr};">
+                <div style="font-size: 12.5px; font-weight: 800; color: {mov_clr};">🧭 {mov_state}</div>
+                <div style="font-size: 12px; color: #CBD5E1; margin-top: 2px; line-height: 1.35;">{mov_desc}</div>
+            </div>
+            <div style="margin-top: 7px; padding: 7px 9px; background: rgba(30, 41, 59, 0.5); border-radius: 6px;">
+                <div style="font-size: 12px; font-weight: 800; color: #F59E0B;">{imb_badge}</div>
+                <div style="font-size: 12px; color: #CBD5E1; line-height: 1.35; margin-top: 2px;">{imb_note}</div>
+            </div>
+        </div>
+        """
+
+    return f"""
+    <div style="flex: 0.85; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="color: #94A3B8; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{header_title}</span>
+                <span style="background: rgba(245,158,11,0.2); color: #F59E0B; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 4px;">⏳ {countdown_str}</span>
+            </div>
+            <div style="font-size: 16px; font-weight: 800; color: #FFFFFF; line-height: 1.35;">📌 {dominant_event}</div>
+            <div style="font-size: 13px; color: #38BDF8; font-weight: 700; margin-top: 3px;">🕒 {time_str}</div>
+            {middle_card_html}
+        </div>
+        {scorecard_html}
+    </div>
+    """

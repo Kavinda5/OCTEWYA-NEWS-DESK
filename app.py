@@ -36,7 +36,7 @@ except ImportError:
     def render_news_sniper_card_html(s, w, l="si"):
         return "" 
 try:
-    from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch
+    from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch, render_macro_catalyst_radar_html
 except ImportError:
     from modules.calendar_engine import fetch_dynamic_calendar
     def get_upcoming_macro_watch(events, macro_data):
@@ -781,21 +781,7 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         f'</div>'
         f'{forecast_html}'
         f'</div>'
-        f'<div style="flex: 0.85; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">'
-        f'<div>'
-        f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
-        f'<span style="color: #94A3B8; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{watch_header}</span>'
-        f'<span style="background: rgba(245,158,11,0.2); color: #F59E0B; font-weight: 800; font-size: 14px; padding: 3px 9px; border-radius: 4px;">⏳ {watch_countdown}</span>'
-        f'</div>'
-        f'<div style="font-size: 16.5px; font-weight: 800; color: #FFFFFF; line-height: 1.35;">📌 {watch_title}</div>'
-        f'<div style="font-size: 13.5px; color: #38BDF8; font-weight: 700; margin-top: 3px;">🕒 {watch_time}</div>'
-        f'</div>'
-        f'<div style="background: rgba(0,0,0,0.5); border: 2px solid {watch_badge_color}; border-radius: 8px; padding: 12px; margin: 10px 0; text-align: center; box-shadow: 0 0 16px {watch_badge_color}33;">'
-        f'<div style="font-size: 19px; font-weight: 900; color: {watch_badge_color}; letter-spacing: 0.5px; text-transform: uppercase;">{watch_impact_label}</div>'
-        f'</div>'
-        f'<div style="font-size: 12.5px; color: #CBD5E1; line-height: 1.4;"><b>💡 Insight:</b> {watch_reason}</div>'
-        f'{scorecard_html}'
-        f'</div>'
+        f'{render_macro_catalyst_radar_html(macro_watch, lang_choice)}'
         f'</div>'
         f'</div>'
     )

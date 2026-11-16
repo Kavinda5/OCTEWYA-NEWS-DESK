@@ -88,8 +88,10 @@ def fetch_live_macro_data(ttl_seconds: int = 30) -> dict:
             latest_g = g_hist.iloc[-1]
             prev_g = g_hist.iloc[-2] if len(g_hist) > 1 else latest_g
             result["gold_price"] = float(latest_g["Close"])
-            result["gold_high"] = float(latest_g["High"])
-            result["gold_low"] = float(latest_g["Low"])
+            # True 24-Hour Session High and Low (London & NY Intraday Cycle)
+            session_window = g_hist.tail(24) if len(g_hist) >= 24 else g_hist
+            result["gold_high"] = float(session_window["High"].max())
+            result["gold_low"] = float(session_window["Low"].min())
             result["gold_change"] = float(latest_g["Close"] - prev_g["Close"])
             result["gold_change_pct"] = float((result["gold_change"] / prev_g["Close"]) * 100)
             

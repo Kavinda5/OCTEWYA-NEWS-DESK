@@ -73,22 +73,22 @@ def generate_macro_assessment(
 
     if is_macro_bullish and is_flow_bearish:
         is_divergent = True
-        master_bias = "BUY_PULLBACK_DIVERGENCE"
-        bias_label_en = f"GOLD (XAUUSD): BUY DIVERGENCE ⚠️ (Macro Bullish, but 15M Flow is {sellers_pct}% Sellers)"
-        bias_label_si = f"GOLD (රත්රන්): BUY DIVERGENCE ⚠️ (Macro Buy වුවද, 15M Flow හි {sellers_pct}% විකුණුම් පීඩනයක්)"
-        divergence_warning_si = f"අවධානය: භූ-දේශපාලනික / ප්‍රවෘත්ති පසුබිමෙන් BUY පීඩනයක් තිබුණද, 15M Order Flow එකේ {sellers_pct}% ක විකුණුම්කරුවන් ලාභ ගනිමින් සිටින බැවින් උඩදී Buy නොකරන්න! කෙටි කාලීන Pullback එක අවසන් වන තෙක් බලා සිටින්න."
-        divergence_warning_en = f"WARNING: Macro & Safe-Haven factors are Bullish, but 15M Order Flow shows {sellers_pct}% Sellers taking profit. Do NOT chase Longs at highs! Await intraday pullback completion."
-        divergence_action_si = "ඉහළ මට්ටම් වලදී BUY නොපනින්න! 15M Pullback එක Support / VPOC වෙත එන තෙක් ඉවසන්න."
-        divergence_action_en = "Do NOT buy the top! Wait for 15M pullback to exhaust into key support / VPOC."
+        master_bias = "BEARISH_PULLBACK_DIVERGENCE"
+        bias_label_en = f"GOLD (XAUUSD): ⚠️ PROFIT-TAKING PULLBACK (BEARISH FLOW DIVERGENCE) (15M Flow is {sellers_pct}% Sellers)"
+        bias_label_si = f"GOLD (රත්රන්): ⚠️ PROFIT-TAKING PULLBACK (BEARISH DIVERGENCE) (15M Flow හි {sellers_pct}% විකුණුම්කරුවන්)"
+        divergence_warning_si = f"පැහැදිලි කිරීම: Macro පසුබිම Buy වුවද, 15M Order Flow එකේ {sellers_pct}% ක විකුණුම්කරුවන් ලාභ ගැනීම (Profit Taking Pullback) නිසා මිල පහළට ගමන් කරයි. ඉහළ මට්ටම් වලදී BUY නොපනින්න!"
+        divergence_warning_en = f"CLARIFICATION: Macro is Bullish, but 15M Order Flow shows {sellers_pct}% Sellers taking profit causing an intraday pullback. Do NOT buy the highs!"
+        divergence_action_si = "ඉහළ මට්ටම් වලදී BUY නොපනින්න! 15M Pullback එක Support / Demand Zone එකක් වෙත එන තෙක් ඉවසන්න."
+        divergence_action_en = "Do NOT buy the highs! Wait for 15M pullback to exhaust into key support / VPOC."
     elif is_macro_bearish and is_flow_bullish:
         is_divergent = True
-        master_bias = "SELL_SQUEEZE_DIVERGENCE"
-        bias_label_en = f"GOLD (XAUUSD): SELL DIVERGENCE ⚠️ (Macro Bearish, but 15M Flow is {buyers_pct}% Squeeze)"
-        bias_label_si = f"GOLD (රත්රන්): SELL DIVERGENCE ⚠️ (Macro Sell වුවද, 15M Flow හි {buyers_pct}% Short Squeeze එකක්)"
-        divergence_warning_si = f"අවධානය: බැඳුම්කර Yields නිසා Macro පසුබිම SELL වුවද, 15M Order Flow හි {buyers_pct}% ගැණුම්කරුවන්ගේ Short Squeeze එකක් පවතින බැවින් පහළදී Sell නොකරන්න!"
-        divergence_warning_en = f"WARNING: Macro Yields are Bearish, but 15M Order Flow shows {buyers_pct}% Buyers driving a Short Squeeze. Do NOT short into momentum; wait for resistance test."
-        divergence_action_si = "පහළ මට්ටම් වලදී SELL නොපනින්න! Squeeze එක Resistance මට්ටමකදී අවසන් වන තෙක් රැඳී සිටින්න."
-        divergence_action_en = "Do NOT short the lows! Wait for squeeze exhaustion at resistance."
+        master_bias = "BULLISH_SQUEEZE_DIVERGENCE"
+        bias_label_en = f"GOLD (XAUUSD): ⚡ BULLISH SQUEEZE (BUY DIVERGENCE) ⚠️ (Macro Bearish, but 15M Flow is {buyers_pct}% Buyers)"
+        bias_label_si = f"GOLD (රත්රන්): ⚡ BULLISH SQUEEZE (BUY DIVERGENCE) ⚠️ (Macro Sell වුවද, 15M Flow හි {buyers_pct}% Buyers Squeeze)"
+        divergence_warning_si = f"පැහැදිලි කිරීම: Chart එකේ මිල සහ CVD/Order Flow එක ඉහළට ගමන් කරන (Bullish Absorption / Buy Divergence) තත්ත්වයක් පවතී! Macro Yields පීඩනය Sell වුවද, 15M Flow හි {buyers_pct}% ගැණුම්කරුවන් Short Squeeze එකක් මෙහෙයවන බැවින් කිසිසේත්ම පහළදී SELL නොකරන්න!"
+        divergence_warning_en = f"CLARIFICATION: Chart shows Bullish CVD Absorption & Buy Divergence. Although Macro Yields lean Bearish, 15M Order Flow is {buyers_pct}% Buyers driving a Short Squeeze. Do NOT short the lows!"
+        divergence_action_si = "පහළ මට්ටම් වලදී SELL නොපනින්න! මිල ඉහළට තල්ලු වන මෙම Squeeze එක Resistance මට්ටමකදී අවසන් වන තෙක් ඉවසන්න."
+        divergence_action_en = "Do NOT short the lows! Let this upward Short Squeeze exhaust into major resistance before looking for shorts."
     elif total_score >= 35:
         master_bias = "STRONG_BUY"
         if buyers_pct >= 55:
