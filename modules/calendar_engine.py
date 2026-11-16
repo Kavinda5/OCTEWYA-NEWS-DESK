@@ -293,8 +293,10 @@ def evaluate_past_release_scorecard(past_events: list, current_macro: dict) -> d
     actual_bias = "SELL_ON_GOLD" if net_score > 0 else ("BUY_ON_GOLD" if net_score < 0 else "NEUTRAL")
     pre_bias = dominant_event.get("evolving_bias", "NEUTRAL")
 
-    # Accuracy verification
+    # Accuracy verification & Honest Accountability
     is_whipsaw = (bullish_w > 0 and bearish_w > 0)
+    is_prediction_missed = False
+
     if is_whipsaw:
         accuracy_label_en = "⚡ WHIPSAW TRAP (DOMINANT ANCHOR PREVAILED)"
         accuracy_label_si = "⚡ WHIPSAW පටලැවිල්ලක් (ප්‍රමුඛ දත්තය ජයගත්තා)"
@@ -305,16 +307,22 @@ def evaluate_past_release_scorecard(past_events: list, current_macro: dict) -> d
         accuracy_label_si = "✅ 100% නිවැරදි අනාවැකියක් (තහවුරු විය)"
         accuracy_color = "#10B981"
         accuracy_pct = "100% Hit"
+    elif pre_bias != "NEUTRAL" and actual_bias != pre_bias:
+        is_prediction_missed = True
+        accuracy_label_en = "❌ PRE-NEWS PREDICTION MISSED (INVERTED REACTION)"
+        accuracy_label_si = "❌ පූර්ව අපේක්ෂාව වැරදී ගියේය (ප්‍රතිවිරුද්ධ ප්‍රතිචාරයක්)"
+        accuracy_color = "#EF4444"
+        accuracy_pct = "Inverted / Missed"
     elif actual_bias == "SELL_ON_GOLD":
-        accuracy_label_en = "✅ FLIPPED TO STRONG SELL ON HOT DATA"
-        accuracy_label_si = "✅ HOT දත්ත මත STRONG SELL තහවුරු විය"
-        accuracy_color = "#10B981"
-        accuracy_pct = "Verified"
+        accuracy_label_en = "⚡ POST-DATA EXPANSION: STRONG SELL ON HOT DATA"
+        accuracy_label_si = "⚡ දත්තයෙන් පසු ප්‍රතිචාරය: HOT දත්ත මත STRONG SELL"
+        accuracy_color = "#38BDF8"
+        accuracy_pct = "Post-Data Active"
     else:
-        accuracy_label_en = "✅ FLIPPED TO STRONG BUY ON COOL DATA"
-        accuracy_label_si = "✅ COOL දත්ත මත STRONG BUY තහවුරු විය"
-        accuracy_color = "#10B981"
-        accuracy_pct = "Verified"
+        accuracy_label_en = "⚡ POST-DATA EXPANSION: STRONG BUY ON COOL DATA"
+        accuracy_label_si = "⚡ දත්තයෙන් පසු ප්‍රතිචාරය: COOL දත්ත මත STRONG BUY"
+        accuracy_color = "#38BDF8"
+        accuracy_pct = "Post-Data Active"
 
     # Evaluate After-Movement State (Continuation vs Mean Reversion)
     hours_ago = abs(pivot["diff_sec"]) / 3600.0
@@ -374,6 +382,7 @@ def evaluate_past_release_scorecard(past_events: list, current_macro: dict) -> d
         "imbalance_note_en": imbalance_note_en,
         "imbalance_note_si": imbalance_note_si,
         "imbalance_badge": imbalance_badge,
+        "is_prediction_missed": is_prediction_missed,
         "breakdown_en": " | ".join(breakdown_en),
         "breakdown_si": " | ".join(breakdown_si)
     }

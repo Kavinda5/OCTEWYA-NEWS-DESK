@@ -29,6 +29,13 @@ except ImportError:
         return ""
 from modules.history_engine import HISTORICAL_EVENTS, compare_historical_precedent
 try:
+    from modules.news_sniper import calculate_news_sniper_call, render_news_sniper_card_html
+except ImportError:
+    def calculate_news_sniper_call(w, m, g=None):
+        return {}
+    def render_news_sniper_card_html(s, w, l="si"):
+        return "" 
+try:
     from modules.calendar_engine import fetch_dynamic_calendar, get_upcoming_macro_watch
 except ImportError:
     from modules.calendar_engine import fetch_dynamic_calendar
@@ -397,6 +404,8 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
     geo_data = fetch_geopolitical_intel()
     calendar_events = fetch_dynamic_calendar(macro_data)
     macro_watch = get_upcoming_macro_watch(calendar_events, macro_data)
+    sniper_data = calculate_news_sniper_call(macro_watch, macro_data, geo_data)
+    sniper_card_html = render_news_sniper_card_html(sniper_data, macro_watch, lang_choice)
     precedent_data = compare_historical_precedent("CPI", macro_data["yield_pressure"], geo_data["risk_level"])
     ai_assessment = generate_macro_assessment(macro_data, geo_data, precedent_data, lang_choice)
     forecast_data = calculate_multi_day_orderflow_forecast(macro_data, geo_data)
@@ -662,7 +671,11 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 {hud_ribbon_html}
 </div>''', unsafe_allow_html=True)
 
-    # 7.5. Dedicated Hero Section    # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
+    # 7.5. Dedicated Hero Section    # 7.45. VIP High-Strike News Sniper Desk & Post-Release Reality Radar
+    if sniper_card_html:
+        st.markdown(sniper_card_html, unsafe_allow_html=True)
+
+    # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
     m_state = geo_data.get("market_state")
     if not m_state or not isinstance(m_state, dict):
         m_state = {
