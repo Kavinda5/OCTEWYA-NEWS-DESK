@@ -676,9 +676,12 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
 {hud_ribbon_html}
 </div>''', unsafe_allow_html=True)
 
-    # 7.5. Dedicated Hero Section    # 7.45. VIP High-Strike News Sniper Desk & Post-Release Reality Radar
+    # 7.45. VIP High-Strike News Sniper Desk & Post-Release Reality Radar
     if sniper_card_html:
-        st.markdown(sniper_card_html, unsafe_allow_html=True)
+        if hasattr(st, "html"):
+            st.html(sniper_card_html)
+        else:
+            st.markdown(sniper_card_html, unsafe_allow_html=True)
 
     # 7.5. Dedicated Hero Section: Gold Market Real-Time State & Live Flash Wires
     m_state = geo_data.get("market_state")

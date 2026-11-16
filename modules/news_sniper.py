@@ -204,7 +204,7 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
     # =========================================================================
     # CASE 1: POST-RELEASE REALITY RADAR (Event Just Concluded or Past Scorecard Active)
     # =========================================================================
-    if watch_status == "POST_RELEASE" or (scorecard and watch_status != "IMMINENT"):
+    if watch_status == "POST_RELEASE":
         if is_missed:
             # Honest Acknowledgment & Recovery Protocol
             card_border = "#EF4444"
@@ -248,7 +248,7 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
                 f'</div>'
             )
 
-        return (
+        raw_case1 = (
             f'<div style="background: {card_bg}; border: 2px solid {card_border}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
             f'<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">'
             f'<div>'
@@ -260,6 +260,7 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
             f'{outcome_box}'
             f'</div>'
         )
+        return "".join(raw_case1.splitlines()).replace("$", "&#36;")
 
     # =========================================================================
     # CASE 2: PRE-NEWS HIGH-STRIKE SNIPER CALL (Upcoming / Imminent)
@@ -288,7 +289,7 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
     horizon_badge = sniper_data.get("horizon_badge_si" if is_si else "horizon_badge_en", "")
     horizon_advice = sniper_data.get("horizon_advice_si" if is_si else "horizon_advice_en", "")
 
-    return (
+    raw_case2 = (
         f'<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(20, 25, 40, 0.98)); border: 2px solid {strike_color}; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
         
         # Header Row
@@ -362,3 +363,4 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
 
         f'</div>'
     )
+    return "".join(raw_case2.splitlines()).replace("$", "&#36;")
