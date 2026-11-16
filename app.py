@@ -546,7 +546,11 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         cal_cols[4].markdown(f"**{t('evolving_bias', lang_choice)}**")
         st.markdown("<hr style='margin:4px 0 10px 0; border-color:#283347;'>", unsafe_allow_html=True)
 
-        for ev in calendar_events:
+        # Filter strictly for Gold Macro Releases (US Events) to eliminate foreign noise
+        gold_cal_events = [e for e in calendar_events if e.get("country", "US") == "US"]
+        if not gold_cal_events:
+            gold_cal_events = calendar_events
+        for ev in gold_cal_events:
             ec1, ec2, ec3, ec4, ec5 = st.columns([2.5, 1, 1.2, 1.2, 2.5])
             ec1.write(f"**{ev['title']}**")
             

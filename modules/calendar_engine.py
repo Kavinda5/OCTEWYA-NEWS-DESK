@@ -568,17 +568,22 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
         }
 
     # =========================================================================
-    # 2. UPCOMING CLUSTER EVALUATION
+    # 2. UPCOMING CLUSTER EVALUATION (Gold-First Priority Anchor)
     # =========================================================================
     if upcoming:
         upcoming.sort(key=lambda x: x["diff_sec"])
-        pivot_event = upcoming[0]
-        pivot_epoch = pivot_event["epoch"]
+        # Prioritize upcoming US macro releases as primary anchor for Gold
+        upcoming_us = [e for e in upcoming if e.get("country", "US") == "US"]
+        if upcoming_us:
+            pivot_event = upcoming_us[0]
+            pivot_epoch = pivot_event["epoch"]
+            cluster = [e for e in upcoming_us if abs(e["epoch"] - pivot_epoch) <= 1800]
+        else:
+            pivot_event = upcoming[0]
+            pivot_epoch = pivot_event["epoch"]
+            cluster = [e for e in upcoming if abs(e["epoch"] - pivot_epoch) <= 1800]
 
-        # Form the Cluster: Group all events scheduled within 30 minutes (1800s) of pivot
-        cluster = [e for e in upcoming if abs(e["epoch"] - pivot_epoch) <= 1800]
         cluster.sort(key=lambda x: x["weight"], reverse=True) # Dominance order
-
         dominant_event = cluster[0]
         diff_sec = pivot_event["diff_sec"]
         h = int(diff_sec // 3600)
@@ -617,8 +622,12 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             advice_en = f"High-Impact catalyst detected. Directional execution is managed by the VIP News Sniper Desk above."
             advice_si = f"ඉදිරියට ඇති ප්‍රධාන පුවත. මෙහි සම්පූර්ණ Sniper සැලසුම ඉහළ VIP Card එකෙන් කළමනාකරණය වේ."
 
-        # G7 Cross-Currency Spillover Detection (CAD, EUR, GBP, JPY)
-        g7_events = [e for e in upcoming if e.get("country") in ["CA", "EU", "GB", "JP"]]
+        # G7 Cross-Currency Spillover Detection (Tier-1 Market Movers Only)
+        g7_events = [
+            e for e in upcoming 
+            if e.get("country") in ["CA", "EU", "GB", "JP"] 
+            and any(k in e.get("title", "").lower() for k in ["cpi", "inflation", "rate", "interest", "gdp", "employment", "unemployment", "payroll", "pmi", "ism", "retail"])
+        ]
         g7_spillover = None
         if g7_events:
             g7_ev = g7_events[0]
@@ -631,18 +640,47 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
             }
             if c_code in dxy_map:
                 c_name, curr, pair, dxy_weight = dxy_map[c_code]
+                fc_val = _parse_num(g7_ev.get("forecast"))
+                pv_val = _parse_num(g7_ev.get("previous"))
+                ev_title_clean = g7_ev.get("raw_title", g7_ev.get("title", "Economic Event"))
+
+                # Concrete Institutional Nowcast
+                if fc_val is not None and pv_val is not None:
+                    if fc_val > pv_val:
+                        bias_badge_si = f"⚠️ {curr} ඉහළ යාමේ නැඹුරුවක් ({curr} BUY LEAN)"
+                        bias_badge_en = f"⚠️ {curr} BULLISH ACCELERATION LEAN"
+                        gold_reaction_si = f"🔥 <b>Gold වෙත ඇති බලපෑම:</b> {curr} උද්ධමනය/දත්ත ඉහළ යාමේ නැඹුරුවක් ඇති බැවින් {curr} ශක්තිමත් වී {pair} පහළ වැටී DXY දුර්වල වුවහොත්, <b>Gold වෙත ඉහළට Buy Spike එකක් (+35 සිට +50 Pips) පැමිණීමේ 70% ක අවදානමක් ඇත.</b> ඔබ US News එකට Sell එකක සිටී නම්, සවස 7:00 ට මෙම {curr} තරංගයෙන් ප්‍රවේශම් වන්න!"
+                        gold_reaction_en = f"🔥 <b>Direct Impact on Gold:</b> Firm {curr} data will sink {pair} and weaken DXY, <b>transmitting a +35 to +50 pip Gold Buy Surge risk.</b> If shorting the US session print, ensure your stops are protected beyond this {curr} liquidity spike!"
+                    elif fc_val < pv_val:
+                        bias_badge_si = f"📉 {curr} ලිහිල් වීමේ නැඹුරුවක් ({curr} WEAK LEAN)"
+                        bias_badge_en = f"📉 {curr} COOLING / WEAK LEAN"
+                        gold_reaction_si = f"📉 <b>Gold වෙත ඇති බලපෑම:</b> {curr} දත්ත ලිහිල් වීමෙන් {pair} ඉහළ ගොස් DXY ශක්තිමත් වුවහොත්, <b>Gold මත පහළට Scalp Pullback (-25 සිට -40 Pips) පීඩනයක් ඇතිවේ.</b>"
+                        gold_reaction_en = f"📉 <b>Direct Impact on Gold:</b> Soft {curr} data will lift {pair} and strengthen DXY, <b>putting intraday scalp pullback pressure (-25 to -40 Pips) on Gold.</b>"
+                    else:
+                        bias_badge_si = f"⚖️ {curr} සමතුලිත අපේක්ෂාවක් (IN-LINE LEAN)"
+                        bias_badge_en = f"⚖️ {curr} BALANCED EXPECTATIONS"
+                        gold_reaction_si = f"⚖️ <b>Gold වෙත ඇති බලපෑම:</b> {curr} දත්ත අපේක්ෂිත මට්ටමේ පවතින බැවින් සාමාන්‍ය DXY පරාසය තුළ පවතිනු ඇත. ක්ෂණික Deviation එකක් ආවොත් පමණක් Gold ප්‍රතිචාර දක්වයි."
+                        gold_reaction_en = f"⚖️ <b>Direct Impact on Gold:</b> In-line {curr} print will keep DXY within standard technical bounds. Only a live release deviation will trigger a Gold ripple."
+                else:
+                    bias_badge_si = f"⚡ {curr} HIGH-IMPACT SPILLOVER WATCH"
+                    bias_badge_en = f"⚡ {curr} HIGH-IMPACT SPILLOVER WATCH"
+                    gold_reaction_si = f"⚡ <b>Gold වෙත ඇති බලපෑම:</b> {c_name} හි {ev_title_clean} නිකුත් වීමත් සමඟ {pair} ({dxy_weight}) මගින් DXY හරහා Gold වෙත ක්ෂණික තරංගයක් (Ripple Effect) පැමිණිය හැක."
+                    gold_reaction_en = f"⚡ <b>Direct Impact on Gold:</b> {c_name} {ev_title_clean} directly drives {pair} ({dxy_weight}), transmitting an immediate spillover ripple into Gold via DXY."
+
                 g7_spillover = {
                     "has_spillover": True,
-                    "title": g7_ev.get("title", ""),
+                    "title": ev_title_clean,
                     "country": c_code,
                     "country_name": c_name,
                     "pair": pair,
                     "dxy_weight": dxy_weight,
                     "time_str": g7_ev.get("sl_full_time", ""),
-                    "transmission_si": f"{c_name} හි {g7_ev.get('title')} නිකුත් වීමත් සමඟ {pair} ({dxy_weight}) යුගලය වේගයෙන් චලනය වන අතර, එය DXY හරහා Gold වෙත සෘජුවම තරංගයක් ලෙස සම්ප්‍රේෂණය වේ.",
-                    "transmission_en": f"{c_name} {g7_ev.get('title')} release directly drives {pair} ({dxy_weight}), transmitting an immediate spillover wave into Gold via DXY.",
-                    "reaction_si": f"• {curr} ශක්තිමත් වුවහොත් ➔ DXY පහළ වැටේ ➔ 🟢 Gold Dip-Buy Push (+35 Pips)<br>• {curr} දුර්වල වුවහොත් ➔ DXY ඉහළ යයි ➔ 🔴 Gold Scalp Pullback (-25 Pips)",
-                    "reaction_en": f"• {curr} Strong ➔ DXY Drops ➔ 🟢 Gold Dip-Buy Push (+35 Pips)<br>• {curr} Weak ➔ DXY Rallies ➔ 🔴 Gold Pullback (-25 Pips)"
+                    "bias_badge_si": bias_badge_si,
+                    "bias_badge_en": bias_badge_en,
+                    "forecast": g7_ev.get("forecast", "-"),
+                    "previous": g7_ev.get("previous", "-"),
+                    "reaction_si": gold_reaction_si,
+                    "reaction_en": gold_reaction_en
                 }
 
         cluster_title_str = f"Macro Cluster ({len(cluster)} Releases) • Anchor: {dominant_event['title']}"
@@ -719,18 +757,19 @@ def render_macro_catalyst_radar_html(macro_watch: dict, lang_choice: str = "si")
         dxy_w = g7.get("dxy_weight", "9.1% of DXY")
         c_name = g7.get("country_name", "G7 Currency")
         ev_title = g7.get("title", "")
-        trans_text = g7.get("transmission_si" if is_si else "transmission_en", "")
+        fc = g7.get("forecast", "-")
+        pv = g7.get("previous", "-")
         react_text = g7.get("reaction_si" if is_si else "reaction_en", "")
+        badge_txt = g7.get("bias_badge_si" if is_si else "bias_badge_en", f"🌐 {pair_str} SPILLOVER")
         
         middle_card_html = (
             f'<div style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0; box-shadow: 0 0 16px rgba(14,165,233,0.18);">'
             f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
-            f'<span style="font-size: 12px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">🌐 {"G7 විදේශ විනිමය තරංග රේඩාර්" if is_si else "G7 CROSS-CURRENCY SPILLOVER"}</span>'
+            f'<span style="font-size: 12px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">🌐 {"G7 විදේශ විනිමය තරංග අනතුරු ඇඟවීම" if is_si else "G7 CROSS-CURRENCY RIPPLE ALERT"}</span>'
             f'<span style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{pair_str} • {dxy_w}</span>'
             f'</div>'
-            f'<div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; line-height: 1.35;">{c_name}: {ev_title}</div>'
-            f'<div style="font-size: 12px; color: #94A3B8; margin-top: 5px; line-height: 1.45;">{trans_text}</div>'
-            f'<div style="margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.4); border-radius: 6px; font-size: 12px; line-height: 1.5; color: #E2E8F0; border-left: 3px solid #38BDF8;">{react_text}</div>'
+            f'<div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; line-height: 1.35;">{c_name}: {ev_title} <span style="color: #94A3B8; font-size: 12px; font-weight: 600;">(Forecast: {fc} / Prev: {pv})</span></div>'
+            f'<div style="margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.45); border-radius: 6px; font-size: 12.5px; line-height: 1.5; color: #E2E8F0; border-left: 3px solid #38BDF8;">{react_text}</div>'
             f'</div>'
         )
     else:
