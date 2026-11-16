@@ -786,7 +786,11 @@ def render_main_dashboard(lang_choice: str, tz_choice: str):
         f'</div>'
         f'</div>'
     )
-    st.markdown(hero_html, unsafe_allow_html=True)
+    hero_html_safe = hero_html.replace('$', '&#36;')
+    if hasattr(st, "html"):
+        st.html(hero_html_safe)
+    else:
+        st.markdown(hero_html_safe, unsafe_allow_html=True)
 
     # Pre-News 3-Scenario Matrix (Clean Sell vs Whipsaw Trap vs Clean Buy)
     scenario_matrix = generate_pre_news_scenario_matrix(macro_watch, macro_data, lang_choice)

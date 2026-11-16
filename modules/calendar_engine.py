@@ -698,8 +698,7 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
 def render_macro_catalyst_radar_html(macro_watch: dict, lang_choice: str = "si") -> str:
     """
     Renders the unified G7 Cross-Currency Spillover & Macro Catalyst Radar
-    for the Hero Section Right Column. Eliminates contradictory two-way labels
-    and seamlessly aligns with the VIP News Sniper Desk.
+    for the Hero Section Right Column without any markdown code-block indentation bugs.
     """
     is_si = (lang_choice == "si")
     header_title = "🎯 ආර්ථික උත්ප්‍රේරක සහ G7 තරංග රේඩාර්" if is_si else "🎯 MACRO CATALYST & G7 SPILLOVER RADAR"
@@ -723,43 +722,27 @@ def render_macro_catalyst_radar_html(macro_watch: dict, lang_choice: str = "si")
         trans_text = g7.get("transmission_si" if is_si else "transmission_en", "")
         react_text = g7.get("reaction_si" if is_si else "reaction_en", "")
         
-        middle_card_html = f"""
-        <div style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0; box-shadow: 0 0 16px rgba(14,165,233,0.18);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 12px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">
-                    🌐 {"G7 විදේශ විනිමය තරංග රේඩාර්" if is_si else "G7 CROSS-CURRENCY SPILLOVER"}
-                </span>
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">
-                    {pair_str} • {dxy_w}
-                </span>
-            </div>
-            <div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; line-height: 1.35;">
-                {c_name}: {ev_title}
-            </div>
-            <div style="font-size: 12px; color: #94A3B8; margin-top: 5px; line-height: 1.45;">
-                {trans_text}
-            </div>
-            <div style="margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.4); border-radius: 6px; font-size: 12px; line-height: 1.5; color: #E2E8F0; border-left: 3px solid #38BDF8;">
-                {react_text}
-            </div>
-        </div>
-        """
+        middle_card_html = (
+            f'<div style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0; box-shadow: 0 0 16px rgba(14,165,233,0.18);">'
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+            f'<span style="font-size: 12px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">🌐 {"G7 විදේශ විනිමය තරංග රේඩාර්" if is_si else "G7 CROSS-CURRENCY SPILLOVER"}</span>'
+            f'<span style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{pair_str} • {dxy_w}</span>'
+            f'</div>'
+            f'<div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; line-height: 1.35;">{c_name}: {ev_title}</div>'
+            f'<div style="font-size: 12px; color: #94A3B8; margin-top: 5px; line-height: 1.45;">{trans_text}</div>'
+            f'<div style="margin-top: 8px; padding: 8px 10px; background: rgba(0, 0, 0, 0.4); border-radius: 6px; font-size: 12px; line-height: 1.5; color: #E2E8F0; border-left: 3px solid #38BDF8;">{react_text}</div>'
+            f'</div>'
+        )
     else:
-        middle_card_html = f"""
-        <div style="background: rgba(14, 165, 233, 0.08); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <span style="font-size: 12.5px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">
-                    🎯 {"ආයතනික දත්ත උත්ප්‍රේරකය" if is_si else "INSTITUTIONAL CATALYST ANCHOR"}
-                </span>
-                <span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">
-                    Dominance: {dominant_weight}/10
-                </span>
-            </div>
-            <div style="font-size: 12.5px; color: #E2E8F0; line-height: 1.45; margin-top: 4px;">
-                {"මෙම ආර්ථික දත්තය සඳහා වන සම්පූර්ණ Directional Pre-News Sniper සැලසුම (Entry / Tight SL / Judas Trap Shield) ඉහළ VIP Desk එකෙන් ක්‍රියාත්මක වේ." if is_si else "Directional pre-news execution (Entry / Tight SL / Judas Shield) is actively managed by the VIP News Sniper Desk above."}
-            </div>
-        </div>
-        """
+        middle_card_html = (
+            f'<div style="background: rgba(14, 165, 233, 0.08); border: 1.5px solid #0EA5E9; border-radius: 8px; padding: 12px 14px; margin: 10px 0;">'
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
+            f'<span style="font-size: 12.5px; font-weight: 900; color: #38BDF8; text-transform: uppercase; letter-spacing: 0.5px;">🎯 {"ආයතනික දත්ත උත්ප්‍රේරකය" if is_si else "INSTITUTIONAL CATALYST ANCHOR"}</span>'
+            f'<span style="font-size: 11.5px; color: #94A3B8; font-weight: 700;">Dominance: {dominant_weight}/10</span>'
+            f'</div>'
+            f'<div style="font-size: 12.5px; color: #E2E8F0; line-height: 1.45; margin-top: 4px;">{"මෙම ආර්ථික දත්තය සඳහා වන සම්පූර්ණ Directional Pre-News Sniper සැලසුම (Entry / Tight SL / Judas Trap Shield) ඉහළ VIP Desk එකෙන් ක්‍රියාත්මක වේ." if is_si else "Directional pre-news execution (Entry / Tight SL / Judas Shield) is actively managed by the VIP News Sniper Desk above."}</div>'
+            f'</div>'
+        )
 
     # 2. Scorecard HTML
     scorecard_html = ""
@@ -773,36 +756,39 @@ def render_macro_catalyst_radar_html(macro_watch: dict, lang_choice: str = "si")
         imb_badge = scorecard.get("imbalance_badge", "")
         sc_title = "🎯 පසුගිය ප්‍රවෘත්ති ප්‍රතිඵලය සහ ගමන්මග" if is_si else "🎯 LAST EVENT OUTCOME & AFTER-MOVEMENT"
         
-        scorecard_html = f"""
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #283347; border-radius: 8px; padding: 12px 14px; margin-top: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">{sc_title}</span>
-                <span style="background: {acc_clr}22; color: {acc_clr}; border: 1px solid {acc_clr}; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{acc_label}</span>
-            </div>
-            <div style="font-size: 13.5px; color: #E2E8F0; font-weight: 700;">📌 {scorecard.get("title")}</div>
-            <div style="font-size: 12px; color: #64748B; margin-top: 2px;">🕒 {scorecard.get("released_time")}</div>
-            <div style="margin-top: 7px; padding: 7px 9px; background: rgba(0,0,0,0.3); border-radius: 6px; border-left: 3px solid {mov_clr};">
-                <div style="font-size: 12.5px; font-weight: 800; color: {mov_clr};">🧭 {mov_state}</div>
-                <div style="font-size: 12px; color: #CBD5E1; margin-top: 2px; line-height: 1.35;">{mov_desc}</div>
-            </div>
-            <div style="margin-top: 7px; padding: 7px 9px; background: rgba(30, 41, 59, 0.5); border-radius: 6px;">
-                <div style="font-size: 12px; font-weight: 800; color: #F59E0B;">{imb_badge}</div>
-                <div style="font-size: 12px; color: #CBD5E1; line-height: 1.35; margin-top: 2px;">{imb_note}</div>
-            </div>
-        </div>
-        """
+        scorecard_html = (
+            f'<div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #283347; border-radius: 8px; padding: 12px 14px; margin-top: 10px;">'
+            f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+            f'<span style="font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">{sc_title}</span>'
+            f'<span style="background: {acc_clr}22; color: {acc_clr}; border: 1px solid {acc_clr}; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{acc_label}</span>'
+            f'</div>'
+            f'<div style="font-size: 13.5px; color: #E2E8F0; font-weight: 700;">📌 {scorecard.get("title")}</div>'
+            f'<div style="font-size: 12px; color: #64748B; margin-top: 2px;">🕒 {scorecard.get("released_time")}</div>'
+            f'<div style="margin-top: 7px; padding: 7px 9px; background: rgba(0,0,0,0.3); border-radius: 6px; border-left: 3px solid {mov_clr};">'
+            f'<div style="font-size: 12.5px; font-weight: 800; color: {mov_clr};">🧭 {mov_state}</div>'
+            f'<div style="font-size: 12px; color: #CBD5E1; margin-top: 2px; line-height: 1.35;">{mov_desc}</div>'
+            f'</div>'
+            f'<div style="margin-top: 7px; padding: 7px 9px; background: rgba(30, 41, 59, 0.5); border-radius: 6px;">'
+            f'<div style="font-size: 12px; font-weight: 800; color: #F59E0B;">{imb_badge}</div>'
+            f'<div style="font-size: 12px; color: #CBD5E1; line-height: 1.35; margin-top: 2px;">{imb_note}</div>'
+            f'</div>'
+            f'</div>'
+        )
 
-    return f"""
-    <div style="flex: 0.85; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="color: #94A3B8; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{header_title}</span>
-                <span style="background: rgba(245,158,11,0.2); color: #F59E0B; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 4px;">⏳ {countdown_str}</span>
-            </div>
-            <div style="font-size: 16px; font-weight: 800; color: #FFFFFF; line-height: 1.35;">📌 {dominant_event}</div>
-            <div style="font-size: 13px; color: #38BDF8; font-weight: 700; margin-top: 3px;">🕒 {time_str}</div>
-            {middle_card_html}
-        </div>
-        {scorecard_html}
-    </div>
-    """
+    full_html = (
+        f'<div style="flex: 0.85; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">'
+        f'<div>'
+        f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">'
+        f'<span style="color: #94A3B8; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{header_title}</span>'
+        f'<span style="background: rgba(245,158,11,0.2); color: #F59E0B; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 4px;">⏳ {countdown_str}</span>'
+        f'</div>'
+        f'<div style="font-size: 16px; font-weight: 800; color: #FFFFFF; line-height: 1.35;">📌 {dominant_event}</div>'
+        f'<div style="font-size: 13px; color: #38BDF8; font-weight: 700; margin-top: 3px;">🕒 {time_str}</div>'
+        f'{middle_card_html}'
+        f'</div>'
+        f'{scorecard_html}'
+        f'</div>'
+    )
+    
+    # Strip any potential leading/trailing space on any line so markdown never misinterprets as a code block
+    return "".join(full_html.splitlines()).replace('$', '&#36;')

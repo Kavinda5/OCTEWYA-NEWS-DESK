@@ -38,7 +38,7 @@ def render_forecast_html(forecast_data: dict, lang_choice: str = "si") -> str:
     pivot_badge_color = "#38BDF8" if "BULLISH" in forecast_data.get("pivot_type", "") else "#F87171"
     pivot_dir_text = "🟢 BUY REVERSAL PIVOT" if "BULLISH" in forecast_data.get("pivot_type", "") else "🔴 SELL REVERSAL PIVOT"
 
-    return (
+    res_html = (
         f'<div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #334155; border-radius: 12px; padding: 16px 18px; margin-top: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.45); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
         
         # Header Row
@@ -118,3 +118,4 @@ def render_forecast_html(forecast_data: dict, lang_choice: str = "si") -> str:
         
         f'</div>'
     )
+    return res_html.replace("$", "&#36;")
