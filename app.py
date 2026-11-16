@@ -1,3 +1,4 @@
+# OCTEWYA Institutional Intelligence Desk - Live Engine v3.6.2 (G7 Radar & Sniper Aligned)
 """
 OCTEWYA | XAUUSD Institutional Macro & Yields Intelligence Desk
 Real-time Geopolitical, Treasury Yields (US02Y / US10Y) & Dynamic Precedent Engine.
