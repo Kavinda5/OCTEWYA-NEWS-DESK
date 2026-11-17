@@ -53,6 +53,13 @@ def calculate_news_sniper_call(macro_watch: dict, current_macro: dict, geo_data:
     # 3. Macro Scoring
     macro_bull_score = 0
     macro_bear_score = 0
+
+    # Incorporate evolving bias from macro_watch (e.g., CAD Strong -> BUY_ON_GOLD)
+    evolving_bias = macro_watch.get("evolving_bias")
+    if evolving_bias == "BUY_ON_GOLD":
+        macro_bull_score += 30
+    elif evolving_bias == "SELL_ON_GOLD":
+        macro_bear_score += 30
     
     if is_inflation:
         # Crude oil dropping = cooling inflation = Dovish Fed = Gold BUY
@@ -205,48 +212,57 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
     # CASE 1: POST-RELEASE REALITY RADAR (Event Just Concluded or Past Scorecard Active)
     # =========================================================================
     if watch_status == "POST_RELEASE":
+        # Extract live verified move details from scorecard if available
+        actual_bias = scorecard.get("actual_bias", "NEUTRAL") if scorecard else "NEUTRAL"
+        pre_bias = scorecard.get("pre_bias", "NEUTRAL") if scorecard else "NEUTRAL"
+        accuracy_label = scorecard.get("accuracy_label_si" if is_si else "accuracy_label_en", "") if scorecard else ""
+        movement_state = scorecard.get("movement_state_si" if is_si else "movement_state_en", "") if scorecard else ""
+        movement_desc = scorecard.get("movement_desc_si" if is_si else "movement_desc_en", "") if scorecard else ""
+        event_title = macro_watch.get("dominant_event", macro_watch.get("title", "Recent Macro Release"))
+
         if is_missed:
             # Honest Acknowledgment & Recovery Protocol
             card_border = "#EF4444"
             card_bg = "linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(20, 10, 15, 0.98))"
             header_title = "❌ POST-RELEASE REALITY RADAR: PREDICTION INVERTED" if not is_si else "❌ පශ්චාත් පුවත් සත්‍ය රේඩාර්: පූර්ව අපේක්ෂාව වැරදී ගියේය"
-            sub_title = "⚠️ ආයතනික අවංකභාවය: අපේක්ෂිත දිශාවට පටහැනිව Market එක ප්‍රතික්‍රියා කර ඇත." if is_si else "⚠️ INSTITUTIONAL ACCOUNTABILITY: Market reacted inversely to pre-news expectation."
+            sub_title = f"⚠️ ආයතනික අවංකභාවය: {event_title} පුවතේ Actual දත්තය අපේක්ෂිත දිශාවට පටහැනිව පැමිණ ඇත." if is_si else f"⚠️ INSTITUTIONAL ACCOUNTABILITY: {event_title} actual release deviated contrary to pre-drift consensus."
             
             outcome_box = (
                 f'<div style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid #EF4444; border-radius: 8px; padding: 12px; margin: 10px 0;">'
                 f'<div style="font-size: 14.5px; font-weight: 800; color: #FCA5A5;">🛑 REVENGE TRADING BLOCKED (කලබල වී Orders නොදමන්න!)</div>'
                 f'<div style="font-size: 13.5px; color: #E2E8F0; line-height: 1.5; margin-top: 4px;">'
-                f'{"Pre-news අපේක්ෂාවට එරෙහිව Actual දත්තය අනපේක්ෂිත ලෙස වෙනස් වූ බැවින් වෙළඳපොළේ Stop Loss කැපී ගියේය. මෙවැනි අවස්ථාවලදී පළිගැනීමට (Revenge Trade) නොගොස් සන්සුන්ව ඉවසීම නියම Trader කෙනෙකුගේ ලක්ෂණයයි." if is_si else "Actual economic data deviated contrary to pre-drift consensus, triggering an inverse expansion. Do NOT revenge trade into live volatility; preserve capital."}'
+                f'{"Pre-news අපේක්ෂාවට එරෙහිව Actual දත්තය අනපේක්ෂිත ලෙස ප්‍රතිවිරුද්ධ දිශාවට ගිය බැවින් Stop Loss ආරක්ෂා විය යුතුය. මෙවැනි වෙලාවට පළිගැනීමට (Revenge Trade) නොගොස් වෙළඳපොළ සන්සුන් වනතුරු ඉවසීම නියම Trader කෙනෙකුගේ ලක්ෂණයයි." if is_si else "Actual economic data deviated contrary to pre-drift consensus, triggering an inverse expansion. Do NOT revenge trade into live volatility; preserve capital."}'
                 f'</div>'
                 f'</div>'
                 f'<div style="background: rgba(0, 0, 0, 0.45); border-left: 4px solid #38BDF8; border-radius: 6px; padding: 10px 14px; margin-top: 8px;">'
                 f'<div style="font-size: 13.5px; font-weight: 800; color: #38BDF8;">🧭 දැන් මාර්කට් එකේ මොකද වෙන්නේ? (Current Market State & Recovery):</div>'
                 f'<div style="font-size: 13.5px; color: #CBD5E1; line-height: 1.5; margin-top: 3px;">'
-                f'{"• ක්ෂණික News Momentum එක මේ වන විට Exhaust වී Daily FVG / Resistance මට්ටමක නවතී.<br>• ඉදිරි පැය 1 - 3 තුළ News ආරම්භක මිල වෙත Pip 120 - 200 ක <b>Mean Reversion Retracement</b> එකක් බලාපොරොත්තු වේ.<br>• <b>Recovery Plan:</b> දැන්ම නොපැන, Pullback එක අවසන් වන Safe Zone එකකදී පමණක් සන්සුන්ව Trade එකක් ගන්න." if is_si else "• Initial news velocity is exhausting into higher-timeframe resistance/support.<br>• Expect a 120-200 pip <b>Mean Reversion Retracement</b> toward pre-news origin over the next 1-3 hours.<br>• <b>Recovery Plan:</b> Await retest exhaustion at key levels before re-engaging."}'
+                f'{"• ක්ෂණික News Momentum එක මේ වන විට Exhaust වෙමින් පවතී.<br>• " + movement_desc + "<br>• <b>Recovery Plan:</b> ක්ෂණික චලනය පසුපස නොඑලවා, සැබෑ Support/Resistance Zone එකක් තහවුරු වනතුරු රැඳී සිටින්න." if is_si else "• Initial news velocity is exhausting into higher-timeframe levels.<br>• " + movement_desc + "<br>• <b>Recovery Plan:</b> Await retest exhaustion at key levels before re-engaging."}'
                 f'</div>'
                 f'</div>'
             )
         else:
-            # Verified Hit & Celebration
+            # Verified Hit & Realistic Post-Release Assessment
             card_border = "#10B981"
             card_bg = "linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(6, 78, 59, 0.25))"
-            header_title = "✅ POST-RELEASE REALITY RADAR: TARGET 1 SECURED (+280 PIPS)!" if not is_si else "✅ පශ්චාත් පුවත් සත්‍ය රේඩාර්: TARGET 1 සාර්ථකව ජයගත්තා (+280 PIPS)!"
-            sub_title = "🎯 අනාවැකිය 100% තහවුරු විය: වෙළඳපොළ අපේක්ෂිත දිශාවටම Pip 280+ ක් ගමන් කර ඇත." if is_si else "🎯 VERIFIED HIT: Market expanded straight into our projected target zone."
+            header_title = f"✅ POST-RELEASE REALITY RADAR: {event_title.upper()}" if not is_si else f"✅ පශ්චාත් පුවත් සත්‍ය රේඩාර්: {event_title}"
+            sub_title = f"🎯 සත්‍යාපිත තත්ත්වය: {accuracy_label}" if is_si else f"🎯 Verified Status: {accuracy_label}"
             
             outcome_box = (
                 f'<div style="background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10B981; border-radius: 8px; padding: 12px; margin: 10px 0;">'
-                f'<div style="font-size: 14.5px; font-weight: 800; color: #86EFAC;">💰 TAKE PROFITS & LOCK GAINS (ලාභ අරන් සැනසිල්ලේ ඉන්න!)</div>'
+                f'<div style="font-size: 14.5px; font-weight: 800; color: #86EFAC;">💰 TAKE PROFITS & LOCK GAINS (ලාභ සුරක්ෂිත කරගන්න)</div>'
                 f'<div style="font-size: 13.5px; color: #E2E8F0; line-height: 1.5; margin-top: 4px;">'
-                f'{"ආයතනික ඉලක්කය සාර්ථකව සපුරා ඇත. දැනටමත් Market එක ඉලක්කගත මට්ටම වෙත ළඟා වී ඇති බැවින් තවදුරටත් චලනය පස්සේ නොඑලවා (Do not chase), ලාභ සුරක්ෂිත කරගන්න." if is_si else "Primary target expansion reached. Do NOT chase extended price; lock in gains and protect capital."}'
+                f'{"පුවත නිකුත් වීමෙන් පසු වෙළඳපොළ ආරම්භක ඉලක්කය වෙත ගමන් කර ඇත. දැනටමත් Market එක චලනය වී ඇති බැවින් පස්සේ නොඑලවා (Do not chase), අත්පත් කරගත් ලාභ සුරක්ෂිත කරගන්න." if is_si else "Post-news reaction has expanded into initial target zone. Do NOT chase extended price; lock in gains and protect capital."}'
                 f'</div>'
                 f'</div>'
                 f'<div style="background: rgba(0, 0, 0, 0.45); border-left: 4px solid #F59E0B; border-radius: 6px; padding: 10px 14px; margin-top: 8px;">'
-                f'<div style="font-size: 13.5px; font-weight: 800; color: #F59E0B;">🧭 වත්මන් තත්ත්වය (Next Market Phase):</div>'
+                f'<div style="font-size: 13.5px; font-weight: 800; color: #F59E0B;">🧭 වත්මන් තත්ත්වය: {movement_state}</div>'
                 f'<div style="font-size: 13.5px; color: #CBD5E1; line-height: 1.5; margin-top: 3px;">'
-                f'{"පුවත් චලනය අවසන් වී වෙළඳපොළ Consolidate වෙමින් පවතී. ඉතිරි Runners තිබේ නම් Stop Loss එක Break-Even වෙත ගෙනැවිත් තබන්න." if is_si else "Expansion complete; market entering liquidity consolidation. Move trailing stops to break-even for remaining runners."}'
+                f'{movement_desc}'
                 f'</div>'
                 f'</div>'
             )
+
 
         raw_case1 = (
             f'<div style="background: {card_bg}; border: 2px solid {card_border}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'

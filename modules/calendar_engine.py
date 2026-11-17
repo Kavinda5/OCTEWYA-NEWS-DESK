@@ -113,6 +113,26 @@ def fetch_dynamic_calendar(current_macro: dict, ttl_seconds: int = 120) -> list:
                         badge_color = "green"
                         reason_en = "Cooling manufacturing/services sentiment expectations favor Gold dip-buyers."
                         reason_si = "නිෂ්පාදන සහ සේවා අංශ ලිහිල් වීමේ අපේක්ෂාව Gold වලට වාසිදායක වේ."
+                elif "retail sales" in lower_title:
+                    fc_num = _parse_num(forecast)
+                    pv_num = _parse_num(previous)
+                    if fc_num is not None and pv_num is not None:
+                        if fc_num < pv_num:
+                            bias = "BUY_ON_GOLD"
+                            badge_color = "green"
+                            reason_en = f"Forecast ({forecast}) cooling below previous ({previous}). Consumer slowdown favors Gold Buy."
+                            reason_si = f"පාරිභෝගික වියදම් පෙර අගයට ({previous}) වඩා අඩු වීම ({forecast}) Gold Buy වෙත වාසිදායක වේ."
+                        else:
+                            bias = "SELL_ON_GOLD"
+                            badge_color = "red"
+                            reason_en = f"Forecast ({forecast}) resilient above previous ({previous}). Consumer strength supports Dollar (Bearish Gold)."
+                            reason_si = f"පාරිභෝගික වියදම් ශක්තිමත් වීම ({forecast}) ඩොලරයට වාසිදායක වන බැවින් Gold Sell නැඹුරුවක් ඇත."
+                    else:
+                        bias = "NEUTRAL"
+                        badge_color = "gray"
+                        reason_en = "Consumer spending data expected."
+                        reason_si = "පාරිභෝගික වියදම් දත්ත අපේක්ෂා කෙරේ."
+
                 else:
                     bias = "NEUTRAL"
                     badge_color = "gray"
@@ -649,13 +669,16 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
                     if fc_val > pv_val:
                         bias_badge_si = f"⚠️ {curr} ඉහළ යාමේ නැඹුරුවක් ({curr} BUY LEAN)"
                         bias_badge_en = f"⚠️ {curr} BULLISH ACCELERATION LEAN"
-                        gold_reaction_si = f"🔥 <b>Gold වෙත ඇති බලපෑම:</b> {curr} උද්ධමනය/දත්ත ඉහළ යාමේ නැඹුරුවක් ඇති බැවින් {curr} ශක්තිමත් වී {pair} පහළ වැටී DXY දුර්වල වුවහොත්, <b>Gold වෙත ඉහළට Buy Spike එකක් (+35 සිට +50 Pips) පැමිණීමේ 70% ක අවදානමක් ඇත.</b> ඔබ US News එකට Sell එකක සිටී නම්, සවස 7:00 ට මෙම {curr} තරංගයෙන් ප්‍රවේශම් වන්න!"
-                        gold_reaction_en = f"🔥 <b>Direct Impact on Gold:</b> Firm {curr} data will sink {pair} and weaken DXY, <b>transmitting a +35 to +50 pip Gold Buy Surge risk.</b> If shorting the US session print, ensure your stops are protected beyond this {curr} liquidity spike!"
+                        # For USD/CAD, USD/JPY: currency strengthening makes the pair DROP (USD drops vs foreign curr)
+                        # For EUR/USD, GBP/USD: currency strengthening makes the pair RISE (DXY drops)
+                        gold_reaction_si = f"🔥 <b>Gold වෙත ඇති බලපෑම:</b> {curr} දත්ත ශක්තිමත් වීම නිසා DXY දුර්වල වුවහොත්, <b>Gold වෙත ඉහළට Buy Push (+35 සිට +50 Pips) පැමිණීමේ අවදානමක් ඇත.</b>"
+                        gold_reaction_en = f"🔥 <b>Direct Impact on Gold:</b> Firm {curr} data strengthens {curr} and softens DXY, <b>transmitting a +35 to +50 pip Gold Buy Push risk.</b>"
                     elif fc_val < pv_val:
                         bias_badge_si = f"📉 {curr} ලිහිල් වීමේ නැඹුරුවක් ({curr} WEAK LEAN)"
                         bias_badge_en = f"📉 {curr} COOLING / WEAK LEAN"
-                        gold_reaction_si = f"📉 <b>Gold වෙත ඇති බලපෑම:</b> {curr} දත්ත ලිහිල් වීමෙන් {pair} ඉහළ ගොස් DXY ශක්තිමත් වුවහොත්, <b>Gold මත පහළට Scalp Pullback (-25 සිට -40 Pips) පීඩනයක් ඇතිවේ.</b>"
-                        gold_reaction_en = f"📉 <b>Direct Impact on Gold:</b> Soft {curr} data will lift {pair} and strengthen DXY, <b>putting intraday scalp pullback pressure (-25 to -40 Pips) on Gold.</b>"
+                        gold_reaction_si = f"📉 <b>Gold වෙත ඇති බලපෑම:</b> {curr} දත්ත ලිහිල් වීමෙන් DXY ශක්තිමත් වුවහොත්, <b>Gold මත පහළට Scalp Pullback (-25 සිට -40 Pips) පීඩනයක් ඇතිවේ.</b>"
+                        gold_reaction_en = f"📉 <b>Direct Impact on Gold:</b> Soft {curr} data lifts DXY, <b>putting intraday scalp pullback pressure (-25 to -40 Pips) on Gold.</b>"
+
                     else:
                         bias_badge_si = f"⚖️ {curr} සමතුලිත අපේක්ෂාවක් (IN-LINE LEAN)"
                         bias_badge_en = f"⚖️ {curr} BALANCED EXPECTATIONS"
