@@ -294,6 +294,15 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
     event_time = macro_watch.get("time_str", "Upcoming Session")
     countdown = macro_watch.get("countdown_str", "00h 00m")
     
+    # Impact Folder Badge (High, Medium, Low)
+    impact_level = macro_watch.get("impact", "HIGH").upper()
+    if impact_level == "HIGH":
+        impact_badge_html = '<span style="background: rgba(239, 68, 68, 0.25); color: #FCA5A5; border: 1.5px solid #EF4444; font-size: 11.5px; font-weight: 900; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">🔴 HIGH IMPACT (RED FOLDER)</span>'
+    elif impact_level == "MEDIUM":
+        impact_badge_html = '<span style="background: rgba(245, 158, 11, 0.25); color: #FCD34D; border: 1.5px solid #F59E0B; font-size: 11.5px; font-weight: 900; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">🟡 MED IMPACT (ORANGE FOLDER)</span>'
+    else:
+        impact_badge_html = '<span style="background: rgba(148, 163, 184, 0.2); color: #CBD5E1; border: 1px solid #94A3B8; font-size: 11.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px;">⚪ LOW IMPACT</span>'
+
     entry_zone = sniper_data.get("entry_zone", "$4,070 - $4,074")
     stop_loss = sniper_data.get("stop_loss", "$4,082")
     tp1 = sniper_data.get("tp1", "$4,042")
@@ -311,8 +320,11 @@ def render_news_sniper_card_html(sniper_data: dict, macro_watch: dict, lang_choi
         # Header Row
         f'<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">'
         f'<div>'
-        f'<div style="font-size: 16px; font-weight: 900; color: #F59E0B; letter-spacing: 0.5px;">{card_title}</div>'
-        f'<div style="font-size: 13px; color: #E2E8F0; margin-top: 2px;">🚨 <b>{event_title}</b> &bull; <span style="color:#38BDF8;">{event_time}</span></div>'
+        f'<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">'
+        f'<span style="font-size: 16px; font-weight: 900; color: #F59E0B; letter-spacing: 0.5px;">{card_title}</span>'
+        f'{impact_badge_html}'
+        f'</div>'
+        f'<div style="font-size: 13.5px; color: #E2E8F0; margin-top: 4px;">🚨 <b>{event_title}</b> &bull; <span style="color:#38BDF8;">{event_time}</span></div>'
         f'</div>'
         f'<div style="display: flex; align-items: center; gap: 8px;">'
         f'<span style="background: rgba(245, 158, 11, 0.2); color: #FCD34D; border: 1px solid #F59E0B; font-size: 12.5px; font-weight: 800; padding: 4px 10px; border-radius: 5px;">⏳ {countdown}</span>'

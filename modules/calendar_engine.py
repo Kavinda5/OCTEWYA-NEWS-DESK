@@ -241,8 +241,13 @@ def get_event_institutional_weight(title: str) -> tuple[int, str]:
         return (8, "TIER1_MACRO")
     if "non-farm" in t or "payrolls" in t or "nfp" in t:
         return (7, "HEADLINE_LABOR") # High initial volatility, but frequently revised
-    if "consumer sentiment" in t or "inflation expectations" in t or "retail sales" in t:
+    if "consumer sentiment" in t or "inflation expectations" in t:
         return (7, "CONSUMER_HEALTH")
+    if "retail sales" in t:
+        # Give headline Retail Sales (and Core) higher precedence so it dominates secondary reports
+        if "ex autos" in t:
+            return (8, "CORE_RETAIL")
+        return (9, "HEADLINE_RETAIL")
     if "manufacturing pmi" in t or "ism manufacturing" in t:
         return (6, "MANUFACTURING") # ~11-12% of US economic output
     if "jobless claims" in t or "ppi" in t or "gdp" in t:
@@ -605,7 +610,14 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
 
         cluster.sort(key=lambda x: x["weight"], reverse=True) # Dominance order
         dominant_event = cluster[0]
-        diff_sec = pivot_event["diff_sec"]
+        # Use dominant event time as primary anchor, noting if warm-up events precede it
+        dominant_diff_sec = dominant_event["diff_sec"]
+        dominant_time_str = dominant_event.get("sl_full_time", pivot_event["sl_full_time"])
+        if pivot_event["diff_sec"] < dominant_diff_sec and abs(dominant_diff_sec - pivot_event["diff_sec"]) >= 600:
+            pivot_time_label = pivot_event.get("sl_time_str", "")
+            dominant_time_str = f"{dominant_time_str} • (⚠️ {pivot_time_label} {pivot_event.get('title','')} Warm-up)"
+        
+        diff_sec = dominant_diff_sec if dominant_diff_sec > 0 else pivot_event["diff_sec"]
         h = int(diff_sec // 3600)
         m = int((diff_sec % 3600) // 60)
         s = int(diff_sec % 60)
@@ -711,8 +723,8 @@ def get_upcoming_macro_watch(events: list, current_macro: dict) -> dict:
         return {
             "status": "IMMINENT" if is_imminent else "UPCOMING",
             "title": cluster_title_str,
-            "impact": "HIGH" if any(e.get("impact") == "HIGH" for e in cluster) else "MEDIUM",
-            "time_str": pivot_event["sl_full_time"],
+            "impact": dominant_event.get("impact", "HIGH" if any(e.get("impact") == "HIGH" for e in cluster) else "MEDIUM"),
+            "time_str": dominant_time_str,
             "countdown_str": countdown_str,
             "evolving_bias": "SELL_ON_GOLD" if sell_bias_weight > buy_bias_weight else ("BUY_ON_GOLD" if buy_bias_weight > sell_bias_weight else "NEUTRAL"),
             "impact_label_en": impact_en,
